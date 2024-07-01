@@ -169,7 +169,7 @@ elif input_method == "File Upload":
             
             user_message_content = {
                 "type": "text",
-                "text": "Identify the plant in the image and provide its common name or scientific name."
+                "text": """Reply with only the plant name and its scientific name. Example: Chinese Rose (Rosa chinensis)"""
             }
             
             response = client.chat.completions.create(
@@ -214,7 +214,7 @@ elif input_method == "Camera Capture":
             
             user_message_content = {
                 "type": "text",
-                "text": "Identify the plant in the image and provide its common name or scientific name."
+                "text": """Reply with only the plant name and its scientific name. Example: Chinese Rose (Rosa chinensis)"""
             }
             
             response = client.chat.completions.create(
