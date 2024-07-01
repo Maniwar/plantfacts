@@ -80,6 +80,7 @@ def get_analysis(plant_name):
 3. **Toxicity**:
    - Is the plant toxic to humans or pets?
    - Symptoms of poisoning
+   - What you should do
 
 4. **Propagation**:
    - Methods of propagation
