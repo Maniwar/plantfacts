@@ -242,39 +242,6 @@ elif input_method == "Camera Capture":
             analysis = get_analysis(plant_name)
             display_analysis(analysis)
 
-st.markdown(
-    """
-    <style>
-    table {
-        width: 100%;
-        margin-left: auto;
-        margin-right: auto;
-        text-align: center;
-    }
-    th, td {
-        padding: 8px;
-        border-bottom: 1px solid #ddd;
-    }
-    </style>
-    <table>
-        <tr>
-            <th>1 Star ⭐️</th>
-            <th>2 Stars ⭐️⭐️</th>
-            <th>3 Stars ⭐️⭐️⭐️</th>
-            <th>4 Stars ⭐️⭐️⭐️⭐️</th>
-            <th>5 Stars ⭐️⭐️⭐️⭐️⭐️</th>
-        </tr>
-        <tr>
-            <td>Poor - Does not meet expectations, significant issues.</td>
-            <td>Fair - Some functionality but with many problems.</td>
-            <td>Good - Meets expectations with average performance and minor drawbacks.</td>
-            <td>Very Good - Exceeds expectations, offering superior functionality with very few issues.</td>
-            <td>Excellent - Exceptional performance with state-of-the-art features.</td>
-        </tr>
-    </table>
-    """,
-    unsafe_allow_html=True
-)
 
 st.divider()
 expander = st.expander("Legal and Data Privacy Statement", expanded=False)
