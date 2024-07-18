@@ -95,7 +95,7 @@ def get_analysis(plant_name):
 
 Make sure the report is detailed and easy to understand for both novice and experienced plant enthusiasts."""
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a plant expert providing detailed information about various plants."},
                 {"role": "user", "content": prompt}
@@ -173,7 +173,7 @@ elif input_method == "File Upload":
             }
             
             response = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "user",
@@ -218,7 +218,7 @@ elif input_method == "Camera Capture":
             }
             
             response = client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "user",
