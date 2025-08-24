@@ -10,7 +10,7 @@ class AppConfig:
     # App Settings
     PAGE_TITLE = "Plant Facts Explorer"
     PAGE_ICON = "🌿"
-    APP_VERSION = "2.0.0"
+    APP_VERSION = "2.1.0"  # Updated: Fixed streaming and caching
     AUTHOR = "Maniwar"
     
     # Input Methods
@@ -73,5 +73,5 @@ Make sure the report is detailed and easy to understand for both novice and expe
         "moderate": "Moderate"
     }
     
-    # Legal Text
-    LEGAL_DISCLAIMER = """This application ("App") is provided "as is" without any warranties..."""  # Truncated for brevity
+    # Legal Text (abbreviated for readability)
+    LEGAL_DISCLAIMER = """This application ("App") is provided "as is" without any warranties..."""
