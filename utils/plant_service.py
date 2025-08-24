@@ -86,7 +86,7 @@ class PlantService:
             image_b64: Base64 encoded image string
             
         Returns:
-            Plant name and scientific name
+            Plant name and scientific name (normalized)
         """
         try:
             response = self.client.chat.completions.create(
@@ -110,6 +110,9 @@ class PlantService:
             )
             
             plant_name = response.choices[0].message.content.strip()
+            # Normalize the plant name for consistent caching
+            plant_name = self._normalize_plant_name(plant_name)
+            logger.info(f"Identified plant from image: {plant_name}")
             return plant_name
             
         except Exception as e:
