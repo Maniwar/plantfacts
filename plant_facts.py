@@ -7,6 +7,7 @@ Version: 2.0.0 - Updated for Streamlit 2025
 
 import streamlit as st
 import base64
+import logging
 from utils.config import AppConfig
 from utils.ui_components import (
     render_header,
@@ -18,6 +19,12 @@ from utils.plant_service import PlantService
 from utils.search_service import get_search_suggestions
 from utils.cache_service import CacheService
 from streamlit_searchbox import st_searchbox
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Initialize configuration
 config = AppConfig()
@@ -44,6 +51,52 @@ render_custom_css()
 
 # Render header
 render_header()
+
+# Show cache status in sidebar (for debugging)
+with st.sidebar:
+    st.markdown("### 🔧 System Status")
+    if cache_service.is_connected():
+        st.success("✅ Cache: Connected")
+        
+        # Cache testing section
+        with st.expander("Cache Debug"):
+            test_plant = st.text_input("Check if plant is cached:", placeholder="e.g., Rose")
+            if test_plant:
+                # Normalize for consistent checking
+                test_plant_normalized = test_plant.strip().title()
+                if plant_service.get_cached_analysis(test_plant_normalized):
+                    st.success(f"✅ '{test_plant_normalized}' is cached")
+                    # Add clear cache button for testing
+                    if st.button("Clear this cache entry", key="clear_cache"):
+                        cache_key = f"{config.CACHE_KEY_PREFIX}{test_plant_normalized}"
+                        if cache_service.delete(cache_key):
+                            st.info(f"Cleared cache for '{test_plant_normalized}'")
+                            st.rerun()
+                else:
+                    st.info(f"❌ '{test_plant_normalized}' not in cache")
+    else:
+        st.warning("⚠️ Cache: Disabled")
+        st.caption("App works without caching")
+        with st.expander("Redis Setup Help"):
+            st.markdown("""
+            **Options to enable caching:**
+            1. **Local Redis**: `docker run -p 6379:6379 redis`
+            2. **Redis Cloud**: Free tier at redis.com
+            3. **Upstash**: Serverless Redis at upstash.com
+            
+            Add to `.streamlit/secrets.toml`:
+            ```
+            REDIS_HOST = "your-host"
+            REDIS_PORT = 6379
+            REDIS_PASSWORD = "your-password"
+            ```
+            """)
+    
+    st.divider()
+    st.markdown("### 📊 App Info")
+    st.caption(f"Version: {config.APP_VERSION}")
+    st.caption(f"Author: {config.AUTHOR}")
+    st.caption("Cache TTL: No expiration (permanent)")  # Cache never expires
 
 # Input method selector with modern styling
 with st.container():
@@ -81,17 +134,24 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
     
     if search_button and plant_name:
         try:
-            # Check if we have cached data
-            if plant_service.get_cached_analysis(plant_name):
-                with st.spinner("✨ Loading from cache..."):
-                    # For cached data, display instantly without streaming
-                    analysis = plant_service.get_cached_analysis(plant_name)
-                    st.info("💾 Loaded from cache - instant results!")
+            # Normalize plant name for consistent caching
+            plant_name = plant_name.strip().title()
+            
+            # Check cache first
+            cached_analysis = plant_service.get_cached_analysis(plant_name)
+            
+            if cached_analysis:
+                # Display cached content instantly
+                st.info("💾 Loading from cache - instant results!")
+                analysis = cached_analysis
+                # Show debug info in development
+                if st.secrets.get("DEBUG", False):
+                    st.caption(f"Cache hit: {len(cached_analysis)} characters")
             else:
+                # Stream new content
                 with st.spinner("🌿 Analyzing plant information..."):
-                    # For new data, use streaming
                     analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
-                    st.success("✅ Analysis complete and cached for future use!")
+                st.success("✅ Analysis complete and cached for future use!")
             
             # Display the analysis
             st.divider()
@@ -127,16 +187,20 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                     st.success(f"✅ Identified: **{plant_name}**")
                 
                 # Check cache status
-                if plant_service.get_cached_analysis(plant_name):
-                    with st.spinner("✨ Loading from cache..."):
-                        # For cached data, display instantly
-                        analysis = plant_service.get_cached_analysis(plant_name)
-                        st.info("💾 Loaded from cache - instant results!")
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                
+                if cached_analysis:
+                    # Display cached content instantly
+                    st.info("💾 Loading from cache - instant results!")
+                    analysis = cached_analysis
+                    # Show debug info in development
+                    if st.secrets.get("DEBUG", False):
+                        st.caption(f"Cache hit: {len(cached_analysis)} characters")
                 else:
+                    # Stream new content
                     with st.spinner("🌿 Fetching detailed information..."):
-                        # For new data, use streaming
                         analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
-                        st.success("✅ Analysis complete and cached for future use!")
+                    st.success("✅ Analysis complete and cached for future use!")
             
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
@@ -169,16 +233,20 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                     st.success(f"✅ Identified: **{plant_name}**")
                 
                 # Check cache status
-                if plant_service.get_cached_analysis(plant_name):
-                    with st.spinner("✨ Loading from cache..."):
-                        # For cached data, display instantly
-                        analysis = plant_service.get_cached_analysis(plant_name)
-                        st.info("💾 Loaded from cache - instant results!")
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                
+                if cached_analysis:
+                    # Display cached content instantly
+                    st.info("💾 Loading from cache - instant results!")
+                    analysis = cached_analysis
+                    # Show debug info in development
+                    if st.secrets.get("DEBUG", False):
+                        st.caption(f"Cache hit: {len(cached_analysis)} characters")
                 else:
+                    # Stream new content
                     with st.spinner("🌿 Fetching detailed information..."):
-                        # For new data, use streaming
                         analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
-                        st.success("✅ Analysis complete and cached for future use!")
+                    st.success("✅ Analysis complete and cached for future use!")
             
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
