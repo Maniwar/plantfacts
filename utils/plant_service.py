@@ -6,8 +6,6 @@ Handles OpenAI API interactions for plant analysis and identification
 from openai import OpenAI
 import streamlit as st
 from typing import Generator, Optional
-from utils.config import AppConfig
-from utils.cache_service import CacheService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,7 +13,7 @@ logger = logging.getLogger(__name__)
 class PlantService:
     """Service for plant identification and analysis using OpenAI"""
     
-    def __init__(self, cache_service: CacheService):
+    def __init__(self, cache_service):
         """
         Initialize PlantService with OpenAI client and cache
         
@@ -37,6 +35,9 @@ class PlantService:
             self.client = None
         
         self.cache = cache_service
+        
+        # Import config here to avoid circular imports
+        from utils.config import AppConfig
         self.config = AppConfig()
     
     def is_ready(self) -> bool:
@@ -58,13 +59,14 @@ class PlantService:
     
     def get_analysis_stream(self, plant_name: str) -> Generator[str, None, None]:
         """
-        Get plant analysis with streaming support (ONLY for new content)
+        Get plant analysis with streaming support
+        This method should ONLY be called when content is NOT cached
         
         Args:
             plant_name: Name of the plant to analyze
             
         Yields:
-            Chunks of analysis text (only streams if not cached)
+            Chunks of analysis text
         """
         # Check if OpenAI client is initialized
         if not self.client:
@@ -74,13 +76,6 @@ class PlantService:
         # Normalize plant name for consistent caching
         plant_name = self._normalize_plant_name(plant_name)
         cache_key = f"{self.config.CACHE_KEY_PREFIX}{plant_name}"
-        
-        # Double-check cache doesn't exist (shouldn't happen if called correctly)
-        cached_result = self.cache.get(cache_key)
-        if cached_result:
-            logger.warning(f"get_analysis_stream called for cached plant: {plant_name}")
-            yield cached_result
-            return
         
         # Generate new analysis with streaming
         full_response = ""
@@ -112,13 +107,13 @@ class PlantService:
             if full_response:
                 success = self.cache.set(cache_key, full_response, expire=self.config.CACHE_TTL)
                 if success:
-                    logger.info(f"Successfully cached analysis for: {plant_name} (permanent cache)")
+                    logger.info(f"Successfully cached analysis for: {plant_name}")
                 else:
                     logger.warning(f"Failed to cache analysis for: {plant_name}")
                     
         except Exception as e:
             logger.error(f"Error generating analysis for {plant_name}: {e}")
-            yield f"Error generating analysis: {str(e)}"
+            yield f"\n\nError generating analysis: {str(e)}"
     
     def get_cached_analysis(self, plant_name: str) -> Optional[str]:
         """
@@ -128,7 +123,7 @@ class PlantService:
             plant_name: Name of the plant
             
         Returns:
-            Cached analysis or None
+            Cached analysis or None if not found
         """
         # Normalize plant name for consistent caching
         plant_name = self._normalize_plant_name(plant_name)
