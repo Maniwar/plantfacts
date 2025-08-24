@@ -22,7 +22,20 @@ class PlantService:
         Args:
             cache_service: Instance of CacheService for caching results
         """
-        self.client = OpenAI(api_key=st.secrets.get("OPENAI_API_KEY"))
+        try:
+            api_key = st.secrets.get("OPENAI_API_KEY")
+            if not api_key:
+                logger.error("OPENAI_API_KEY not found in secrets")
+                st.error("⚠️ OpenAI API key not configured. Please add OPENAI_API_KEY to secrets.")
+                self.client = None
+            else:
+                self.client = OpenAI(api_key=api_key)
+                logger.info("OpenAI client initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing OpenAI client: {e}")
+            st.error(f"⚠️ Error initializing OpenAI: {e}")
+            self.client = None
+        
         self.cache = cache_service
         self.config = AppConfig()
     
@@ -88,6 +101,9 @@ class PlantService:
         Returns:
             Plant name and scientific name (normalized)
         """
+        if not self.client:
+            raise Exception("OpenAI API not configured. Please check your API key.")
+        
         try:
             response = self.client.chat.completions.create(
                 model=self.config.OPENAI_MODEL,
@@ -119,7 +135,9 @@ class PlantService:
             logger.error(f"Error identifying plant from image: {e}")
             raise Exception(f"Failed to identify plant: {str(e)}")
     
-    def get_cached_analysis(self, plant_name: str) -> Optional[str]:
+    def is_ready(self) -> bool:
+        """Check if the service is ready to use"""
+        return self.client is not None
         """
         Get cached analysis if available
         
