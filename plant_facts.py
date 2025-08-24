@@ -158,7 +158,7 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
         
         # For mobile/Enter key support: Simple text input as fallback
         with st.container():
-            st.caption("💡 Can't find what you're looking for? Type below and press Enter:")
+            st.caption("💡 Type pick from the drop down menu above and click search, or do a direct search below and press enter.:")
             
             # Form captures Enter key
             with st.form(key="text_search_form", clear_on_submit=False):
