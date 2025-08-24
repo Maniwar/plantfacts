@@ -1,7 +1,8 @@
 """
 UI Components Module
-Reusable UI components using Streamlit 2025 features and proper CSS implementation
+Reusable UI components with beautiful, modern design
 Author: Maniwar
+Version: 2.3.0 - Beautiful UI redesign
 """
 
 import streamlit as st
@@ -12,186 +13,253 @@ from typing import Dict, Optional
 
 def load_custom_css():
     """
-    Load custom CSS that actually works with Streamlit
-    Uses st.markdown with unsafe_allow_html=True for proper CSS injection
+    Load custom CSS for beautiful, modern UI
     """
     css = """
     <style>
-        /* Import Google Fonts and FontAwesome */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+        /* Import Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+        
+        /* Hide weird 0 and comment elements */
+        .stMarkdown p:empty,
+        span:empty,
+        div[data-testid="stMarkdownContainer"] > p:empty {
+            display: none !important;
+        }
         
         /* Global App Styling */
         .stApp {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
         
-        /* Header with floating leaf animation */
+        /* Beautiful Header */
         .header-container {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 2rem;
-            border-radius: 20px;
+            padding: 3rem 2rem;
+            border-radius: 24px;
             margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 60%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(20px); }
         }
         
         .header-content {
             display: flex;
             align-items: center;
             color: white;
+            position: relative;
+            z-index: 1;
         }
         
         .header-icon {
-            font-size: 60px;
-            margin-right: 20px;
+            font-size: 72px;
+            margin-right: 24px;
             animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
         }
         
         @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
         }
         
         .header-text h1 {
             margin: 0;
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
             color: white !important;
-            background: none !important;
-            -webkit-text-fill-color: white !important;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
         
         .header-text p {
-            margin: 0.5rem 0 0 0;
-            font-size: 1.1rem;
+            margin: 0.75rem 0 0 0;
+            font-size: 1.25rem;
             opacity: 0.95;
+            color: rgba(255,255,255,0.95);
+            font-weight: 400;
+        }
+        
+        /* Analysis Container Styling */
+        .analysis-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 1.5rem;
+            border-radius: 16px 16px 0 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         
-        /* Style containers with borders */
-        div[data-testid="stContainer"] > div:has(> div[data-testid="stVerticalBlock"]) {
-            background: rgba(255, 255, 255, 0.95);
-            transition: all 0.3s ease;
-        }
-        
-        /* Style metrics containers */
+        /* Metrics Styling */
         [data-testid="metric-container"] {
-            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
-            border: 1px solid #667eea30;
-            padding: 1.2rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: white;
+            border: 2px solid #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         [data-testid="metric-container"]:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+            border-color: #667eea;
         }
         
-        /* Style metric labels and values */
         [data-testid="metric-container"] label {
-            color: #667eea;
+            color: #64748b;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         [data-testid="metric-container"] [data-testid="metric-value"] {
-            font-size: 1.4rem;
+            font-size: 1.75rem;
             font-weight: 700;
-            color: #2d3748;
+            color: #1e293b;
+            font-family: 'Space Grotesk', sans-serif;
         }
         
-        /* Button styling */
+        /* Button Styling */
         .stButton > button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 0.6rem 1.5rem;
-            border-radius: 8px;
+            padding: 0.75rem 2rem;
+            border-radius: 12px;
             font-weight: 600;
-            transition: all 0.3s ease;
-            width: 100%;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
         
         .stButton > button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
         
-        /* Success, info, warning boxes */
+        /* Container with border */
+        div[data-testid="stContainer"][data-container-border="true"],
+        .stContainer > div:has(> div[data-testid="stVerticalBlock"]) {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        /* Success/Info/Warning Messages */
         .stSuccess, .stInfo, .stWarning {
-            padding: 1rem;
-            border-radius: 8px;
-            border-left: 4px solid;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: none;
+            font-weight: 500;
         }
         
         .stSuccess {
-            background: #d4edda;
-            border-left-color: #28a745;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
         }
         
         .stInfo {
-            background: #d1ecf1;
-            border-left-color: #17a2b8;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
         }
         
         .stWarning {
-            background: #fff3cd;
-            border-left-color: #ffc107;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
         }
         
-        /* Expander styling */
-        .streamlit-expanderHeader {
-            background: #f8f9fa;
-            border-radius: 8px;
-            font-weight: 600;
-        }
-        
-        /* Container with border styling */
-        div.stContainer[data-container-border="true"] {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 1.5rem;
+        /* Radio buttons */
+        .stRadio > div[role="radiogroup"] {
             background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            padding: 0.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
         
-        /* Sidebar styling */
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+        /* Expander */
+        .streamlit-expanderHeader {
+            background: white;
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 1rem;
+            transition: all 0.3s ease;
         }
         
-        /* Radio button styling */
-        .stRadio > div {
-            display: flex;
+        .streamlit-expanderHeader:hover {
+            background: #f8fafc;
+        }
+        
+        /* Images */
+        .stImage {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        
+        /* Divider */
+        hr {
+            margin: 3rem 0;
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+        }
+        
+        /* Scrollable container */
+        div[data-testid="stVerticalBlock"] > div:has(div.element-container) {
             gap: 1rem;
         }
         
-        /* Image container styling */
-        .stImage {
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        /* Hide empty paragraphs and zeros */
+        p:empty,
+        span:contains("0"):only-child,
+        .element-container:has(> div > p:empty) {
+            display: none !important;
         }
         
-        /* Divider styling */
-        hr {
-            margin: 2rem 0;
-            border: none;
-            border-top: 2px solid #e2e8f0;
+        /* Footer */
+        .footer-container {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 3rem;
+            border-radius: 24px;
+            margin-top: 4rem;
+            color: white;
+            text-align: center;
         }
         
-        /* Mobile responsive */
+        /* Mobile Responsive */
         @media (max-width: 768px) {
             .header-text h1 {
-                font-size: 1.8rem;
+                font-size: 2rem;
             }
             .header-icon {
-                font-size: 40px;
+                font-size: 48px;
             }
             .header-container {
-                padding: 1.5rem;
+                padding: 2rem 1.5rem;
             }
         }
     </style>
@@ -200,75 +268,80 @@ def load_custom_css():
 
 def render_header():
     """
-    Render the application header with floating leaf animation
+    Render beautiful application header
     """
-    # Create header with gradient background and floating leaf
     header_html = """
     <div class="header-container">
         <div class="header-content">
             <div class="header-icon">
-                <i class="fas fa-leaf"></i>
+                🌿
             </div>
             <div class="header-text">
                 <h1>Plant Facts Explorer</h1>
-                <p>Discover detailed information about any plant with AI-powered insights</p>
+                <p>Discover the amazing world of plants with AI-powered insights</p>
             </div>
         </div>
     </div>
     """
     st.markdown(header_html, unsafe_allow_html=True)
-    st.divider()
 
 def get_plant_image(plant_name: str) -> str:
     """
     Get a plant image URL from Unsplash
-    
-    Args:
-        plant_name: Name of the plant
-        
-    Returns:
-        Image URL
     """
-    # Import config here to avoid circular imports
     from utils.config import AppConfig
     config = AppConfig()
-    
-    return f"https://source.unsplash.com/{config.IMAGE_WIDTH}x{config.IMAGE_HEIGHT}/?{plant_name.replace(' ', ',')},plant,nature"
+    return f"https://source.unsplash.com/{config.IMAGE_WIDTH}x{config.IMAGE_HEIGHT}/?{plant_name.replace(' ', ',')},plant,botanical,garden"
 
 def extract_quick_facts(analysis: str) -> Dict[str, str]:
     """
     Extract quick facts from plant analysis
     """
-    # Import config here to avoid circular imports
     from utils.config import AppConfig
     config = AppConfig()
     
     facts = {}
-    
-    # Toxicity check
     analysis_lower = analysis.lower()
+    
+    # Toxicity check with better icons
     if "toxic" in analysis_lower:
         if "not toxic" in analysis_lower or "non-toxic" in analysis_lower:
-            facts["Toxicity"] = "Safe ✅"
+            facts["Safety"] = "Pet Safe ✅"
         else:
-            facts["Toxicity"] = "Toxic ⚠️"
+            facts["Safety"] = "Toxic ⚠️"
     
-    # Light requirements
-    for pattern in config.LIGHT_PATTERNS:
+    # Light requirements with icons
+    light_icons = {
+        "full sun": "☀️ Full Sun",
+        "partial shade": "⛅ Partial",
+        "full shade": "🌙 Shade",
+        "bright indirect": "💡 Bright",
+        "low light": "🔅 Low Light"
+    }
+    
+    for pattern, display in light_icons.items():
         if pattern in analysis_lower:
-            facts["Light"] = pattern.title()
+            facts["Light"] = display
             break
     
-    # Watering needs
-    for pattern, value in config.WATER_PATTERNS.items():
+    # Watering with icons
+    water_icons = {
+        "daily": "💧 Daily",
+        "weekly": "💦 Weekly",
+        "moderate": "💧 Moderate",
+        "drought": "🌵 Minimal"
+    }
+    
+    for pattern, display in water_icons.items():
         if pattern in analysis_lower:
-            facts["Water"] = value
+            facts["Water"] = display
             break
     
-    # Origin
+    # Origin with flag emoji (simplified)
     origin_match = re.search(r'native to ([^,\.]+)', analysis_lower)
     if origin_match:
-        facts["Origin"] = origin_match.group(1).title()
+        origin = origin_match.group(1).title()
+        facts["Origin"] = f"🌍 {origin}"
     
     return facts
 
@@ -276,48 +349,53 @@ def clean_text_for_tts(text: str) -> str:
     """
     Clean text for text-to-speech conversion
     """
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)  # Remove bold
-    text = re.sub(r'\#\#(.*?)\n', r'\1. ', text)  # Convert headers
+    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+    text = re.sub(r'\#\#(.*?)\n', r'\1. ', text)
     text = re.sub(r'\#(.*?)\n', r'\1. ', text)
-    text = re.sub(r'\* (.*?)\n', r'\1. ', text)  # Convert list items
-    text = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text)  # Remove links
+    text = re.sub(r'\* (.*?)\n', r'\1. ', text)
+    text = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text)
     text = text.replace('|', ', ').replace('-', ' ').replace('`', '')
     return text
 
 def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bool = True):
     """
-    Render plant analysis using Streamlit 2025 features
+    Render beautiful plant analysis display
     """
-    # Main header with gradient effect
-    st.markdown(f"## 🌱 Analysis: {plant_name}")
-    
-    # Create responsive columns with borders
-    col1, col2 = st.columns([1, 2], gap="large")
-    
-    with col1:
-        # Plant image with rounded corners (via CSS)
-        image_url = get_plant_image(plant_name)
-        st.image(image_url, caption=plant_name, use_container_width=True)
+    # Main container with nice styling
+    with st.container():
+        # Beautiful header for analysis
+        st.markdown(f"""
+        <div class="analysis-header">
+            <span>🌱</span>
+            <span>Analysis: {plant_name}</span>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Quick Facts section with modern metrics
-        with st.container(border=True):
+        # Create responsive columns
+        col1, col2 = st.columns([2, 3], gap="large")
+        
+        with col1:
+            # Plant image with nice styling
+            image_url = get_plant_image(plant_name)
+            st.image(image_url, caption=f"🌿 {plant_name}", use_container_width=True)
+            
+            # Quick Facts with beautiful cards
             st.markdown("### ⭐ Quick Facts")
             facts = extract_quick_facts(analysis)
             
             if facts:
                 # Create a 2-column grid for metrics
-                metric_cols = st.columns(2)
+                fact_cols = st.columns(2)
                 for i, (label, value) in enumerate(facts.items()):
-                    with metric_cols[i % 2]:
-                        st.metric(label=label, value=value)
-            else:
-                st.info("Analyzing plant characteristics...")
-        
-        # Audio section
-        if not mute_audio:
-            with st.container(border=True):
+                    with fact_cols[i % 2]:
+                        # Use container for better styling
+                        with st.container():
+                            st.metric(label=label, value=value)
+            
+            # Audio section (if not muted)
+            if not mute_audio:
                 st.markdown("### 🔊 Audio Guide")
-                with st.spinner("Generating audio narration..."):
+                with st.spinner("Generating audio..."):
                     try:
                         clean_analysis = clean_text_for_tts(analysis)
                         audio_stream = BytesIO()
@@ -325,112 +403,90 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                         tts.write_to_fp(audio_stream)
                         st.audio(audio_stream, format="audio/mpeg")
                     except Exception as e:
-                        st.warning(f"Audio generation unavailable: {str(e)}")
-    
-    with col2:
-        # Create scrollable container for detailed analysis (new 2025 feature)
-        with st.container(height=600):
-            st.markdown("### 📋 Detailed Analysis")
+                        st.warning(f"Audio unavailable: {str(e)}")
+        
+        with col2:
+            # Detailed analysis with scrollable container
+            st.markdown("### 📋 Detailed Information")
             
-            # Parse and display sections
+            # Parse and display sections beautifully
             sections = analysis.split('\n\n')
             
             for section in sections:
                 if section.strip():
                     section_lower = section.lower()
                     
-                    # General Information
+                    # Format each section type differently
                     if any(x in section_lower for x in ["general information", "**1."]):
-                        with st.container(border=True):
-                            st.markdown("#### 📝 General Information")
+                        with st.expander("📝 General Information", expanded=True):
                             content = re.sub(r'\*\*(?:1\.|General Information:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
-                    # Care Instructions
                     elif any(x in section_lower for x in ["care instructions", "**2."]):
-                        with st.container(border=True):
-                            st.markdown("#### 🌱 Care Instructions")
+                        with st.expander("🌱 Care Instructions", expanded=True):
                             content = re.sub(r'\*\*(?:2\.|Care Instructions:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
-                    # Toxicity
                     elif any(x in section_lower for x in ["toxicity", "**3."]):
-                        container_type = st.warning if "toxic" in section_lower and "not toxic" not in section_lower else st.container
-                        if container_type == st.warning:
-                            st.warning("⚠️ **Toxicity Warning**\n\n" + re.sub(r'\*\*(?:3\.|Toxicity:?)\*\*:?\s*', '', section))
-                        else:
-                            with st.container(border=True):
-                                st.markdown("#### ⚠️ Toxicity Information")
-                                content = re.sub(r'\*\*(?:3\.|Toxicity:?)\*\*:?\s*', '', section)
-                                st.markdown(content)
+                        is_toxic = "toxic" in section_lower and "not toxic" not in section_lower
+                        with st.expander("⚠️ Safety Information", expanded=is_toxic):
+                            content = re.sub(r'\*\*(?:3\.|Toxicity:?)\*\*:?\s*', '', section)
+                            if is_toxic:
+                                st.warning(content)
+                            else:
+                                st.success(content)
                     
-                    # Propagation
                     elif any(x in section_lower for x in ["propagation", "**4."]):
-                        with st.container(border=True):
-                            st.markdown("#### 🌿 Propagation Methods")
+                        with st.expander("🌿 Propagation Methods", expanded=False):
                             content = re.sub(r'\*\*(?:4\.|Propagation:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
-                    # Common Issues
                     elif any(x in section_lower for x in ["common issues", "problems", "**5."]):
-                        with st.expander("🐛 Common Issues & Solutions", expanded=True):
+                        with st.expander("🐛 Common Issues & Solutions", expanded=False):
                             content = re.sub(r'\*\*(?:5\.|Common Issues:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
-                    # Interesting Facts
                     elif any(x in section_lower for x in ["interesting facts", "**6."]):
-                        with st.container(border=True):
-                            st.markdown("#### 💡 Interesting Facts")
+                        with st.expander("💡 Interesting Facts", expanded=True):
                             content = re.sub(r'\*\*(?:6\.|Interesting Facts:?)\*\*:?\s*', '', section)
-                            st.markdown(content)
+                            st.info(content)
                     
-                    # Other sections
                     else:
-                        if section.strip():
-                            with st.container(border=True):
+                        # Other sections
+                        if section.strip() and len(section.strip()) > 20:
+                            with st.expander("📌 Additional Information", expanded=False):
                                 st.markdown(section)
 
 def render_custom_css():
-    """Apply custom CSS styles to the app"""
+    """Apply beautiful custom CSS styles"""
     load_custom_css()
 
 def render_legal_footer():
-    """Render the legal disclaimer and footer"""
+    """Render beautiful legal disclaimer and footer"""
     st.divider()
     
-    with st.expander("📜 Legal and Data Privacy Statement"):
-        legal_container = st.container()
-        with legal_container:
-            st.markdown("""
-            ### Legal Statement
-            This application is provided "as is" without any warranties, express or implied. 
-            The information provided is for informational purposes only and not a substitute 
-            for professional advice regarding plant care or safety.
-            
-            ### Data Privacy
-            - **Collection**: Only plant queries are collected for service provision
-            - **Usage**: Data is cached temporarily for performance optimization
-            - **Sharing**: No third-party data sharing except OpenAI for analysis
-            - **Security**: Standard security measures implemented
-            
-            ### Copyright
-            © 2024 Plant Facts Explorer by Maniwar. Licensed under MIT License.
-            
-            *AI-generated content should be verified with professional sources.*
-            """)
+    with st.expander("📜 Legal & Privacy Information"):
+        st.markdown("""
+        ### Legal Disclaimer
+        This application provides plant information for educational purposes only. 
+        Always consult professionals for plant care and safety advice.
+        
+        ### Privacy Policy
+        - We only collect plant search queries
+        - Data may be cached for performance
+        - No personal information is stored
+        - OpenAI processes plant analysis requests
+        
+        ### Copyright
+        © 2024 Plant Facts Explorer by Maniwar
+        Released under MIT License
+        """)
     
-    # Footer with author credit
-    footer_container = st.container()
-    with footer_container:
-        st.markdown(
-            """
-            <div style='text-align: center; padding: 2rem; margin-top: 2rem; 
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        border-radius: 12px; color: white;'>
-                <p style='margin: 0; font-size: 1.1rem;'>🌿 Plant Facts Explorer</p>
-                <p style='margin: 0.5rem 0; opacity: 0.9;'>Created with ❤️ by Maniwar</p>
-                <p style='margin: 0; opacity: 0.8; font-size: 0.9rem;'>© 2024 | MIT License</p>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+    # Beautiful footer
+    st.markdown("""
+    <div class="footer-container">
+        <h3>🌿 Plant Facts Explorer</h3>
+        <p>Made with ❤️ by Maniwar • Version 2.3.0</p>
+        <p style="opacity: 0.8; font-size: 0.9rem;">© 2024 • Powered by OpenAI & Streamlit</p>
+    </div>
+    """, unsafe_allow_html=True)
