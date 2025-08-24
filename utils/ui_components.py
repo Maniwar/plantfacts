@@ -2,7 +2,7 @@
 UI Components Module
 Verbatim LLM rendering + animations (leaf, sheen, typewriter), reliable images
 Author: Maniwar
-Version: 6.0.0 - Reimagined beautiful particle effects
+Version: 7.0.0 - Mobile-optimized, single stunning particle effect, streaming animations
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ from io import BytesIO
 from typing import Dict, Optional
 from urllib.parse import quote
 import hashlib
-import random
 
 import requests
 import streamlit as st
@@ -22,7 +21,7 @@ from gtts import gTTS
 
 
 # =========================================================
-# Global CSS (only our own HTML is passed here)
+# Global CSS with mobile optimization
 # =========================================================
 def load_custom_css() -> None:
     st.html(
@@ -37,25 +36,57 @@ def load_custom_css() -> None:
 
           .stApp { font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
-          /* Header */
+          /* Header - Mobile Optimized */
           .header {
             position:relative; overflow:hidden;
             background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 100%);
-            padding: 2.1rem 1.6rem; border-radius: var(--panel-radius);
-            color:#fff; box-shadow:0 16px 36px rgba(0,0,0,.15); margin-bottom: 1rem;
+            padding: 1.5rem 1rem; 
+            border-radius: var(--panel-radius);
+            color:#fff; 
+            box-shadow:0 16px 36px rgba(0,0,0,.15); 
+            margin-bottom: 1rem;
           }
-          .sheen { position:absolute; top:-50%; right:-10%; width:60%; height:200%;
-                   background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
-                   animation: shimmer 3.5s ease-in-out infinite; pointer-events:none; }
-          .title-row { display:flex; align-items:center; gap:.75rem; }
-          .leaf { font-size:2rem; filter: drop-shadow(0 8px 16px rgba(0,0,0,.25));
-                  animation: float 4.5s ease-in-out infinite; }
-          .headline { font-family:'Space Grotesk', sans-serif; font-size:2rem; font-weight:700; line-height:1.1; margin:0; }
+          
+          .sheen { 
+            position:absolute; top:-50%; right:-10%; width:60%; height:200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+            animation: shimmer 3.5s ease-in-out infinite; 
+            pointer-events:none; 
+          }
+          
+          .title-row { 
+            display:flex; 
+            align-items:center; 
+            gap:.5rem; 
+            flex-wrap: nowrap;
+          }
+          
+          .leaf { 
+            font-size:1.8rem; 
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,.25));
+            animation: float 4.5s ease-in-out infinite; 
+            flex-shrink: 0;
+          }
+          
+          .headline { 
+            font-family:'Space Grotesk', sans-serif; 
+            font-size: clamp(1.3rem, 5vw, 2rem); 
+            font-weight:700; 
+            line-height:1.1; 
+            margin:0;
+            word-break: break-word;
+          }
 
-          /* Typewriter subtitle */
-          .subtitle { margin:.45rem 0 0 0; }
+          /* Typewriter subtitle - Mobile Optimized */
+          .subtitle { 
+            margin:.45rem 0 0 0; 
+            font-size: clamp(0.85rem, 3vw, 1rem);
+          }
+          
           .typewriter {
-            display:inline-block; overflow:hidden; white-space:nowrap;
+            display:inline-block; 
+            overflow:hidden; 
+            white-space:nowrap;
             border-right:.12em solid rgba(255,255,255,.85);
             animation: typing 3s steps(40,end), blink .85s step-end infinite;
             max-width:100%;
@@ -64,21 +95,101 @@ def load_custom_css() -> None:
 
           .bar-title {
             background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 100%);
-            color:#fff; font-weight:700; padding:.8rem 1rem; border-radius:12px;
-            display:flex; align-items:center; gap:.6rem; margin-top:.3rem;
+            color:#fff; 
+            font-weight:700; 
+            padding:.8rem 1rem; 
+            border-radius:12px;
+            display:flex; 
+            align-items:center; 
+            gap:.6rem; 
+            margin-top:.3rem;
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
           }
 
-          .stImage { border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.12); }
+          .stImage { 
+            border-radius:14px; 
+            box-shadow:0 8px 24px rgba(0,0,0,.12); 
+          }
+          
+          /* Streaming content animation */
+          .streaming-content {
+            animation: fadeInUp 0.3s ease-out;
+          }
+          
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
+          .typing-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1.2em;
+            background: var(--grad-2);
+            animation: cursor-blink 1s infinite;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+          }
+          
+          @keyframes cursor-blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+          }
 
           /* Animations */
-          @keyframes shimmer { 0%,100%{transform:translateX(0)} 50%{transform:translateX(18px)} }
-          @keyframes float   { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-10px) rotate(6deg)} }
-          @keyframes typing  { from{ width:0 } to{ width:100% } }
-          @keyframes blink   { from, to { border-color: transparent } 50% { border-color: rgba(255,255,255,.85) } }
+          @keyframes shimmer { 
+            0%,100%{transform:translateX(0)} 
+            50%{transform:translateX(18px)} 
+          }
+          
+          @keyframes float { 
+            0%,100%{transform:translateY(0) rotate(0deg)} 
+            50%{transform:translateY(-10px) rotate(6deg)} 
+          }
+          
+          @keyframes typing { 
+            from{ width:0 } 
+            to{ width:100% } 
+          }
+          
+          @keyframes blink { 
+            from, to { border-color: transparent } 
+            50% { border-color: rgba(255,255,255,.85) } 
+          }
+
+          /* Mobile-specific adjustments */
+          @media (max-width: 768px) {
+            .header {
+              padding: 1.2rem 0.8rem;
+            }
+            
+            .title-row {
+              gap: 0.4rem;
+            }
+            
+            .leaf {
+              font-size: 1.5rem;
+            }
+            
+            .subtitle {
+              margin-top: 0.3rem;
+            }
+          }
 
           /* Respect reduced motion */
           @media (prefers-reduced-motion: reduce) {
-            .sheen, .leaf, .typewriter { animation: none !important; border-right:none; }
+            .sheen, .leaf, .typewriter, .streaming-content, .typing-cursor { 
+              animation: none !important; 
+            }
+            .typewriter {
+              border-right: none;
+            }
           }
 
           /* Tidy default spacing from model text */
@@ -94,6 +205,7 @@ def render_header(
     show_leaf: bool = True,
     typewriter: bool = True,
 ) -> None:
+    """Render header with mobile-optimized layout"""
     leaf = '<span class="leaf">🌿</span>' if show_leaf else ""
     sub_html = (
         f'<div class="subtitle"><span class="typewriter">{_html.escape(subtitle)}</span></div>'
@@ -115,372 +227,357 @@ def render_header(
 
 
 # =========================================================
-# Reimagined Beautiful Particle System
+# Single Stunning Particle Effect - Magical Garden
 # =========================================================
 def render_particles(
     enabled: bool = True,
-    height: int = 150,
-    preset: str = "garden",  # New presets: garden, fireflies, pollen, rain, butterflies, bokeh
-    intensity: float = 1.0,
-    interactive: bool = True,
+    height: int = 120,
 ) -> None:
     """
-    Beautifully reimagined particle effects with nature themes.
-    
-    Presets:
-    - garden: Multi-layer garden scene with leaves, petals, and light particles
-    - fireflies: Glowing fireflies with realistic movement
-    - pollen: Floating pollen with wind effects
-    - rain: Gentle rain with splash effects
-    - butterflies: Animated butterflies
-    - bokeh: Beautiful bokeh light effects
+    Single stunning particle effect: Magical Garden
+    Combines multiple natural elements for a beautiful, cohesive effect
     """
     if not enabled:
         return
 
     from streamlit.components.v1 import html as _html_iframe
-    import json
     
-    # Generate unique ID to prevent conflicts
-    container_id = f"particles_{random.randint(1000, 9999)}"
-    
-    # Validate preset
-    valid_presets = {"garden", "fireflies", "pollen", "rain", "butterflies", "bokeh"}
-    preset = preset.lower() if preset in valid_presets else "garden"
-    intensity = max(0.3, min(2.0, float(intensity)))
-    
-    html_code = f"""
+    # Use a simpler, more reliable approach with CSS animations
+    html_code = """
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="utf-8">
         <style>
-            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            body {{ 
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
                 margin: 0; 
                 padding: 0; 
                 overflow: hidden; 
                 background: transparent;
-            }}
-            #canvas {{
-                display: block;
-                width: 100%;
                 height: 100vh;
-                cursor: crosshair;
-            }}
+                position: relative;
+            }
+            
+            .particle-container {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+            
+            /* Floating light orbs */
+            .orb {
+                position: absolute;
+                border-radius: 50%;
+                background: radial-gradient(circle at 30% 30%, 
+                    rgba(255, 255, 255, 0.3), 
+                    rgba(147, 197, 253, 0.2),
+                    transparent);
+                filter: blur(1px);
+                animation: float-orb 20s infinite ease-in-out;
+            }
+            
+            .orb:nth-child(1) {
+                width: 80px; height: 80px;
+                left: 10%; top: 20%;
+                animation-duration: 18s;
+                animation-delay: 0s;
+            }
+            
+            .orb:nth-child(2) {
+                width: 60px; height: 60px;
+                left: 70%; top: 40%;
+                animation-duration: 22s;
+                animation-delay: 2s;
+            }
+            
+            .orb:nth-child(3) {
+                width: 100px; height: 100px;
+                left: 40%; top: 60%;
+                animation-duration: 25s;
+                animation-delay: 4s;
+            }
+            
+            .orb:nth-child(4) {
+                width: 50px; height: 50px;
+                left: 85%; top: 15%;
+                animation-duration: 20s;
+                animation-delay: 1s;
+            }
+            
+            .orb:nth-child(5) {
+                width: 70px; height: 70px;
+                left: 25%; top: 75%;
+                animation-duration: 23s;
+                animation-delay: 3s;
+            }
+            
+            /* Falling leaves */
+            .leaf {
+                position: absolute;
+                font-size: 20px;
+                animation: fall-leaf 12s infinite linear;
+                opacity: 0;
+            }
+            
+            .leaf:nth-child(6) {
+                left: 10%;
+                animation-delay: 0s;
+                animation-duration: 11s;
+            }
+            
+            .leaf:nth-child(7) {
+                left: 30%;
+                animation-delay: 2s;
+                animation-duration: 13s;
+            }
+            
+            .leaf:nth-child(8) {
+                left: 50%;
+                animation-delay: 4s;
+                animation-duration: 10s;
+            }
+            
+            .leaf:nth-child(9) {
+                left: 70%;
+                animation-delay: 1s;
+                animation-duration: 12s;
+            }
+            
+            .leaf:nth-child(10) {
+                left: 90%;
+                animation-delay: 3s;
+                animation-duration: 14s;
+            }
+            
+            /* Floating petals */
+            .petal {
+                position: absolute;
+                width: 15px;
+                height: 15px;
+                background: radial-gradient(ellipse, 
+                    rgba(255, 182, 193, 0.8), 
+                    rgba(255, 105, 180, 0.4));
+                border-radius: 0 100% 0 100%;
+                animation: fall-petal 15s infinite ease-in-out;
+                opacity: 0;
+            }
+            
+            .petal:nth-child(11) {
+                left: 15%;
+                animation-delay: 0.5s;
+                animation-duration: 14s;
+            }
+            
+            .petal:nth-child(12) {
+                left: 35%;
+                animation-delay: 2.5s;
+                animation-duration: 16s;
+            }
+            
+            .petal:nth-child(13) {
+                left: 55%;
+                animation-delay: 1.5s;
+                animation-duration: 13s;
+            }
+            
+            .petal:nth-child(14) {
+                left: 75%;
+                animation-delay: 3.5s;
+                animation-duration: 15s;
+            }
+            
+            .petal:nth-child(15) {
+                left: 95%;
+                animation-delay: 4.5s;
+                animation-duration: 17s;
+            }
+            
+            /* Glowing particles */
+            .glow {
+                position: absolute;
+                width: 4px;
+                height: 4px;
+                background: rgba(255, 255, 200, 0.8);
+                border-radius: 50%;
+                box-shadow: 0 0 10px rgba(255, 255, 200, 0.5);
+                animation: float-glow 20s infinite ease-in-out;
+                opacity: 0;
+            }
+            
+            .glow:nth-child(16) {
+                left: 20%;
+                animation-delay: 0s;
+                animation-duration: 18s;
+            }
+            
+            .glow:nth-child(17) {
+                left: 40%;
+                animation-delay: 1s;
+                animation-duration: 19s;
+            }
+            
+            .glow:nth-child(18) {
+                left: 60%;
+                animation-delay: 2s;
+                animation-duration: 21s;
+            }
+            
+            .glow:nth-child(19) {
+                left: 80%;
+                animation-delay: 3s;
+                animation-duration: 20s;
+            }
+            
+            .glow:nth-child(20) {
+                left: 45%;
+                animation-delay: 4s;
+                animation-duration: 22s;
+            }
+            
+            /* Animations */
+            @keyframes float-orb {
+                0%, 100% {
+                    transform: translate(0, 0) scale(1);
+                    opacity: 0.3;
+                }
+                25% {
+                    transform: translate(30px, -20px) scale(1.1);
+                    opacity: 0.4;
+                }
+                50% {
+                    transform: translate(-20px, 10px) scale(0.95);
+                    opacity: 0.3;
+                }
+                75% {
+                    transform: translate(10px, -30px) scale(1.05);
+                    opacity: 0.35;
+                }
+            }
+            
+            @keyframes fall-leaf {
+                0% {
+                    transform: translateY(-20px) rotate(0deg);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 0.7;
+                }
+                90% {
+                    opacity: 0.7;
+                }
+                100% {
+                    transform: translateY(calc(100vh + 20px)) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes fall-petal {
+                0% {
+                    transform: translateY(-20px) translateX(0) rotate(0deg);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 0.6;
+                }
+                25% {
+                    transform: translateY(25vh) translateX(20px) rotate(90deg);
+                }
+                50% {
+                    transform: translateY(50vh) translateX(-15px) rotate(180deg);
+                }
+                75% {
+                    transform: translateY(75vh) translateX(25px) rotate(270deg);
+                }
+                90% {
+                    opacity: 0.6;
+                }
+                100% {
+                    transform: translateY(calc(100vh + 20px)) translateX(0) rotate(360deg);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes float-glow {
+                0%, 100% {
+                    transform: translateY(0) translateX(0);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 0.8;
+                }
+                50% {
+                    transform: translateY(-30px) translateX(20px);
+                    opacity: 0.4;
+                }
+                90% {
+                    opacity: 0.8;
+                }
+            }
+            
+            /* Reduced motion support */
+            @media (prefers-reduced-motion: reduce) {
+                .orb, .leaf, .petal, .glow {
+                    animation: none !important;
+                    opacity: 0.3;
+                }
+            }
         </style>
     </head>
     <body>
-        <canvas id="canvas"></canvas>
-        <script>
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            let width = canvas.width = window.innerWidth;
-            let height = canvas.height = window.innerHeight;
-            let mouseX = width / 2;
-            let mouseY = height / 2;
-            let particles = [];
-            let frame = 0;
+        <div class="particle-container">
+            <!-- Light orbs -->
+            <div class="orb"></div>
+            <div class="orb"></div>
+            <div class="orb"></div>
+            <div class="orb"></div>
+            <div class="orb"></div>
             
-            const PRESET = "{preset}";
-            const INTENSITY = {intensity};
-            const INTERACTIVE = {str(interactive).lower()};
+            <!-- Falling leaves -->
+            <div class="leaf">🍃</div>
+            <div class="leaf">🍃</div>
+            <div class="leaf">🍃</div>
+            <div class="leaf">🍃</div>
+            <div class="leaf">🍃</div>
             
-            // Handle resize
-            window.addEventListener('resize', () => {{
-                width = canvas.width = window.innerWidth;
-                height = canvas.height = window.innerHeight;
-            }});
+            <!-- Floating petals -->
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
+            <div class="petal"></div>
             
-            // Mouse tracking
-            if (INTERACTIVE) {{
-                canvas.addEventListener('mousemove', (e) => {{
-                    mouseX = e.clientX;
-                    mouseY = e.clientY;
-                }});
-            }}
-            
-            // Utility functions
-            const random = (min, max) => Math.random() * (max - min) + min;
-            const distance = (x1, y1, x2, y2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-            
-            // Particle class
-            class Particle {{
-                constructor(config) {{
-                    Object.assign(this, config);
-                    this.reset();
-                }}
-                
-                reset() {{
-                    this.x = random(0, width);
-                    this.y = random(-100, height);
-                    this.size = this.baseSize * random(0.5, 1.5);
-                    this.speedX = random(-0.5, 0.5) * INTENSITY;
-                    this.speedY = random(0.2, 1) * INTENSITY;
-                    this.opacity = 0;
-                    this.targetOpacity = random(0.3, 1);
-                    this.rotation = random(0, Math.PI * 2);
-                    this.rotationSpeed = random(-0.02, 0.02);
-                    this.life = 0;
-                    this.maxLife = random(200, 400);
-                    this.offsetX = random(-50, 50);
-                    this.offsetY = random(-50, 50);
-                }}
-                
-                update() {{
-                    // Fade in/out
-                    if (this.life < 20) {{
-                        this.opacity = (this.life / 20) * this.targetOpacity;
-                    }} else if (this.life > this.maxLife - 20) {{
-                        this.opacity = ((this.maxLife - this.life) / 20) * this.targetOpacity;
-                    }} else {{
-                        this.opacity = this.targetOpacity;
-                    }}
-                    
-                    // Movement
-                    this.x += this.speedX;
-                    this.y += this.speedY;
-                    this.rotation += this.rotationSpeed;
-                    this.life++;
-                    
-                    // Reset if needed
-                    if (this.life > this.maxLife || this.y > height + 100) {{
-                        this.reset();
-                    }}
-                    
-                    // Mouse interaction
-                    if (INTERACTIVE && this.interactive !== false) {{
-                        const dist = distance(this.x, this.y, mouseX, mouseY);
-                        if (dist < 100) {{
-                            const angle = Math.atan2(this.y - mouseY, this.x - mouseX);
-                            const force = (100 - dist) / 100 * 2;
-                            this.x += Math.cos(angle) * force;
-                            this.y += Math.sin(angle) * force;
-                        }}
-                    }}
-                }}
-                
-                draw() {{
-                    ctx.save();
-                    ctx.globalAlpha = this.opacity;
-                    ctx.translate(this.x, this.y);
-                    ctx.rotate(this.rotation);
-                    
-                    if (this.type === 'leaf') {{
-                        // Draw leaf shape
-                        ctx.fillStyle = this.color;
-                        ctx.beginPath();
-                        ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                    }} else if (this.type === 'petal') {{
-                        // Draw petal shape
-                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
-                        gradient.addColorStop(0, this.color);
-                        gradient.addColorStop(1, this.color2 || this.color);
-                        ctx.fillStyle = gradient;
-                        ctx.beginPath();
-                        ctx.ellipse(0, 0, this.size * 0.8, this.size * 1.2, 0, 0, Math.PI * 2);
-                        ctx.fill();
-                    }} else if (this.type === 'firefly') {{
-                        // Glowing firefly
-                        const pulse = Math.sin(frame * 0.05 + this.offsetX) * 0.3 + 0.7;
-                        ctx.shadowBlur = this.size * 3 * pulse;
-                        ctx.shadowColor = this.color;
-                        ctx.fillStyle = this.color;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size * pulse, 0, Math.PI * 2);
-                        ctx.fill();
-                    }} else if (this.type === 'rain') {{
-                        // Rain drop
-                        ctx.strokeStyle = this.color;
-                        ctx.lineWidth = this.size;
-                        ctx.lineCap = 'round';
-                        ctx.beginPath();
-                        ctx.moveTo(0, 0);
-                        ctx.lineTo(0, this.size * 10);
-                        ctx.stroke();
-                    }} else if (this.type === 'butterfly') {{
-                        // Animated butterfly
-                        const wing = Math.sin(frame * 0.1 + this.offsetX) * 0.5 + 0.5;
-                        ctx.fillStyle = this.color;
-                        // Left wing
-                        ctx.beginPath();
-                        ctx.ellipse(-this.size * wing, 0, this.size, this.size * 0.7, -0.3, 0, Math.PI * 2);
-                        ctx.fill();
-                        // Right wing
-                        ctx.beginPath();
-                        ctx.ellipse(this.size * wing, 0, this.size, this.size * 0.7, 0.3, 0, Math.PI * 2);
-                        ctx.fill();
-                        // Body
-                        ctx.fillStyle = '#4a4a4a';
-                        ctx.fillRect(-2, -this.size * 0.5, 4, this.size);
-                    }} else if (this.type === 'bokeh') {{
-                        // Bokeh light effect
-                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
-                        gradient.addColorStop(0, this.color);
-                        gradient.addColorStop(0.4, this.color + '88');
-                        gradient.addColorStop(1, 'transparent');
-                        ctx.fillStyle = gradient;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
-                        ctx.fill();
-                    }} else {{
-                        // Default circle
-                        ctx.fillStyle = this.color;
-                        ctx.beginPath();
-                        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
-                        ctx.fill();
-                    }}
-                    
-                    ctx.restore();
-                }}
-            }}
-            
-            // Initialize particles based on preset
-            function initParticles() {{
-                particles = [];
-                
-                if (PRESET === 'garden') {{
-                    // Multi-layer garden scene
-                    // Background bokeh lights
-                    for (let i = 0; i < 15 * INTENSITY; i++) {{
-                        particles.push(new Particle({{
-                            type: 'bokeh',
-                            baseSize: random(20, 40),
-                            color: random(0, 1) > 0.5 ? 'rgba(255, 223, 186, 0.3)' : 'rgba(186, 255, 201, 0.3)',
-                            speedY: 0.1,
-                            interactive: false
-                        }}));
-                    }}
-                    // Falling leaves
-                    for (let i = 0; i < 8 * INTENSITY; i++) {{
-                        particles.push(new Particle({{
-                            type: 'leaf',
-                            baseSize: random(8, 15),
-                            color: ['#8ee59b', '#6ee7b7', '#a3e635', '#86efac'][Math.floor(random(0, 4))],
-                            speedY: 0.8
-                        }}));
-                    }}
-                    // Floating petals
-                    for (let i = 0; i < 12 * INTENSITY; i++) {{
-                        particles.push(new Particle({{
-                            type: 'petal',
-                            baseSize: random(6, 12),
-                            color: 'rgba(255, 182, 193, 0.8)',
-                            color2: 'rgba(255, 105, 180, 0.6)',
-                            speedY: 0.5
-                        }}));
-                    }}
-                }} else if (PRESET === 'fireflies') {{
-                    // Magical fireflies
-                    for (let i = 0; i < 25 * INTENSITY; i++) {{
-                        particles.push(new Particle({{
-                            type: 'firefly',
-                            baseSize: random(2, 4),
-                            color: ['#fff59d', '#ffeb3b', '#fffde7'][Math.floor(random(0, 3))],
-                            speedX: random(-1, 1),
-                            speedY: random(-0.5, 0.5)
-                        }}));
-                    }}
-                }} else if (PRESET === 'pollen') {{
-                    // Floating pollen with wind
-                    for (let i = 0; i < 40 * INTENSITY; i++) {{
-                        particles.push(new Particle({{
-                            type: 'circle',
-                            baseSize: random(1, 3),
-                            color: 'rgba(255, 235, 59, 0.6)',
-                            speedX: Math.sin(frame * 0.01) * 2,
-                            speedY: 0.3
-                        }}));
-                    }}
-                }} else if (PRESET === 'rain') {{
-                    // Gentle rain
-                    for (let i = 0; i < 50 * INTENSITY; i++) {{
-                        particles.push(new Particle({{
-                            type: 'rain',
-                            baseSize: random(0.5, 1.5),
-                            color: 'rgba(174, 213, 255, 0.6)',
-                            speedY: random(8, 12),
-                            interactive: false
-                        }}));
-                    }}
-                }} else if (PRESET === 'butterflies') {{
-                    // Animated butterflies
-                    const colors = ['#ff9800', '#e91e63', '#9c27b0', '#2196f3', '#4caf50'];
-                    for (let i = 0; i < 10 * INTENSITY; i++) {{
-                        particles.push(new Particle({{
-                            type: 'butterfly',
-                            baseSize: random(8, 15),
-                            color: colors[Math.floor(random(0, colors.length))],
-                            speedX: random(-1, 1),
-                            speedY: random(-0.5, 0.3)
-                        }}));
-                    }}
-                }} else if (PRESET === 'bokeh') {{
-                    // Beautiful bokeh lights
-                    const colors = [
-                        'rgba(255, 193, 7, 0.4)',
-                        'rgba(76, 175, 80, 0.4)',
-                        'rgba(3, 169, 244, 0.4)',
-                        'rgba(233, 30, 99, 0.4)',
-                        'rgba(156, 39, 176, 0.4)'
-                    ];
-                    for (let i = 0; i < 20 * INTENSITY; i++) {{
-                        particles.push(new Particle({{
-                            type: 'bokeh',
-                            baseSize: random(10, 50),
-                            color: colors[Math.floor(random(0, colors.length))],
-                            speedX: random(-0.3, 0.3),
-                            speedY: random(-0.3, 0.3),
-                            interactive: true
-                        }}));
-                    }}
-                }}
-            }}
-            
-            // Animation loop
-            function animate() {{
-                // Create trail effect for some presets
-                if (PRESET === 'fireflies' || PRESET === 'bokeh') {{
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-                    ctx.fillRect(0, 0, width, height);
-                }} else {{
-                    ctx.clearRect(0, 0, width, height);
-                }}
-                
-                // Update and draw particles
-                particles.forEach(particle => {{
-                    particle.update();
-                    particle.draw();
-                }});
-                
-                // Add wind effect for some presets
-                if (PRESET === 'pollen' || PRESET === 'garden') {{
-                    particles.forEach(particle => {{
-                        particle.speedX = Math.sin(frame * 0.01 + particle.offsetX * 0.01) * 0.5 * INTENSITY;
-                    }});
-                }}
-                
-                frame++;
-                requestAnimationFrame(animate);
-            }}
-            
-            // Start animation
-            initParticles();
-            animate();
-            
-            // Reinitialize on preset change (for development)
-            window.addEventListener('message', (e) => {{
-                if (e.data && e.data.type === 'reinit') {{
-                    initParticles();
-                }}
-            }});
-        </script>
+            <!-- Glowing particles -->
+            <div class="glow"></div>
+            <div class="glow"></div>
+            <div class="glow"></div>
+            <div class="glow"></div>
+            <div class="glow"></div>
+        </div>
     </body>
     </html>
     """
     
     _html_iframe(html_code, height=height, scrolling=False)
+
+
+# =========================================================
+# Streaming content with typewriter effect
+# =========================================================
+def render_streaming_content(content: str, container) -> None:
+    """
+    Render streaming content with typewriter-like animation
+    """
+    # Add a cursor at the end for typewriter effect
+    html_content = f"""
+    <div class="streaming-content">
+        <div style="white-space: pre-wrap; font-family: inherit;">
+            {_html.escape(content)}<span class="typing-cursor"></span>
+        </div>
+    </div>
+    """
+    container.markdown(html_content, unsafe_allow_html=True)
 
 
 # =========================================================
@@ -490,7 +587,6 @@ def render_particles(
 def get_plant_image_from_pexels(plant_name: str) -> Optional[Dict[str, str]]:
     """Try to get plant image from Pexels API (requires API key in secrets)"""
     try:
-        # Check if Pexels API key is available
         if "PEXELS_API_KEY" in st.secrets:
             headers = {"Authorization": st.secrets["PEXELS_API_KEY"]}
             response = requests.get(
@@ -516,7 +612,6 @@ def get_plant_image_from_pexels(plant_name: str) -> Optional[Dict[str, str]]:
 def get_plant_image_from_gbif(plant_name: str) -> Optional[Dict[str, str]]:
     """Try to get plant image from GBIF (Global Biodiversity Information Facility)"""
     try:
-        # Search for species
         search_response = requests.get(
             f"https://api.gbif.org/v1/species/match?name={quote(plant_name)}",
             timeout=5
@@ -524,7 +619,6 @@ def get_plant_image_from_gbif(plant_name: str) -> Optional[Dict[str, str]]:
         if search_response.status_code == 200:
             species_data = search_response.json()
             if species_data.get("usageKey"):
-                # Get media for this species
                 media_response = requests.get(
                     f"https://api.gbif.org/v1/species/{species_data['usageKey']}/media",
                     timeout=5
@@ -532,7 +626,6 @@ def get_plant_image_from_gbif(plant_name: str) -> Optional[Dict[str, str]]:
                 if media_response.status_code == 200:
                     media_data = media_response.json()
                     results = media_data.get("results", [])
-                    # Filter for images
                     images = [r for r in results if r.get("type") == "StillImage" and r.get("identifier")]
                     if images:
                         img = images[0]
@@ -550,13 +643,10 @@ def get_plant_image_from_gbif(plant_name: str) -> Optional[Dict[str, str]]:
 def get_plant_image_from_wikipedia(plant_name: str) -> Optional[Dict[str, str]]:
     """Enhanced Wikipedia image search"""
     try:
-        # Try direct title
         title = _normalize_plant_title(plant_name)
         js = _wiki_summary(title)
         
-        # If not found, search with better query
         if not js:
-            # Search specifically in plant categories
             search_response = requests.get(
                 "https://en.wikipedia.org/w/api.php",
                 params={
@@ -589,10 +679,7 @@ def get_plant_image_from_wikipedia(plant_name: str) -> Optional[Dict[str, str]]:
 @st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
 def get_plant_image_from_unsplash(plant_name: str) -> Dict[str, str]:
     """Get a relevant plant image from Unsplash using their public CDN"""
-    # Use a deterministic seed based on plant name for consistency
     seed = hashlib.md5(plant_name.encode()).hexdigest()[:10]
-    
-    # Unsplash public CDN with search terms
     search_terms = quote(f"{plant_name},plant,botanical,nature")
     
     return {
@@ -646,28 +733,20 @@ def _normalize_plant_title(name: str) -> str:
 
 @st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
 def get_plant_image_info(plant_name: str) -> Dict[str, Optional[str]]:
-    """
-    Enhanced image fetching with multiple sources and better fallbacks.
-    Tries multiple sources in order of preference.
-    """
+    """Enhanced image fetching with multiple sources and better fallbacks"""
     # Try multiple sources in order
-    
-    # 1. Try Pexels first (high quality images)
     result = get_plant_image_from_pexels(plant_name)
     if result and result.get("url"):
         return result
     
-    # 2. Try GBIF (scientific database)
     result = get_plant_image_from_gbif(plant_name)
     if result and result.get("url"):
         return result
     
-    # 3. Try Wikipedia (good for common plants)
     result = get_plant_image_from_wikipedia(plant_name)
     if result and result.get("url"):
         return result
     
-    # 4. Use Unsplash as final fallback (always returns something)
     return get_plant_image_from_unsplash(plant_name)
 
 
@@ -718,7 +797,6 @@ def render_plant_analysis_display(
     analysis: str,
     mute_audio: bool = True,
     particles: bool = True,
-    particle_preset: str = "garden",  # New parameter for particle preset
     floating_leaf: bool = True,
     typewriter_subtitle: bool = True,
     allow_model_html: bool = True,
@@ -728,18 +806,9 @@ def render_plant_analysis_display(
     """
     Left: image + quick facts (+ optional audio).
     Right: show LLM output exactly as provided.
-    
-    Args:
-        uploaded_image_bytes: If provided, use this image instead of searching for one
-        particle_preset: Choose from 'garden', 'fireflies', 'pollen', 'rain', 'butterflies', 'bokeh'
     """
-    # Render beautiful particles
-    render_particles(
-        enabled=particles, 
-        preset=particle_preset,
-        intensity=1.0,
-        interactive=True
-    )
+    # Render beautiful particles (single stunning effect)
+    render_particles(enabled=particles)
 
     # Only render the big gradient header if explicitly requested
     if show_header:
@@ -801,7 +870,7 @@ def render_legal_footer() -> None:
         """
         <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
              background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
-          <div>🌿 Plant Facts Explorer • Version 6.0.0</div>
+          <div>🌿 Plant Facts Explorer • Version 7.0.0</div>
           <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
         </div>
         """

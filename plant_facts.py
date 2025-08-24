@@ -33,7 +33,8 @@ from utils.ui_components import (
     render_header,
     render_custom_css,
     render_plant_analysis_display,
-    render_legal_footer
+    render_legal_footer,
+    render_streaming_content
 )
 
 # Initialize configuration
@@ -65,21 +66,6 @@ render_custom_css()
 
 # Render header
 render_header()
-
-# Particle effect selector
-particle_preset = st.selectbox(
-    "✨ Choose Particle Effect",
-    ["garden", "fireflies", "pollen", "rain", "butterflies", "bokeh"],
-    format_func=lambda x: {
-        "garden": "🌸 Garden - Leaves, petals & bokeh",
-        "fireflies": "✨ Fireflies - Magical glowing lights",
-        "pollen": "🌾 Pollen - Floating with wind",
-        "rain": "💧 Rain - Gentle rainfall",
-        "butterflies": "🦋 Butterflies - Animated wings",
-        "bokeh": "💫 Bokeh - Beautiful light orbs"
-    }[x],
-    help="Select the particle animation effect for the background"
-)
 
 # Show cache status at the top (no sidebar)
 with st.expander("🔧 System Status", expanded=False):
@@ -180,9 +166,8 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
                     # Stream the content and accumulate it
                     for chunk in plant_service.get_analysis_stream(plant_name):
                         analysis += chunk
-                        # Update the streaming display
-                        with stream_container.container():
-                            st.markdown(analysis)
+                        # Update the streaming display with animation
+                        render_streaming_content(analysis, stream_container)
                 
                 # Clear the placeholder after streaming is complete
                 content_placeholder.empty()
@@ -193,7 +178,7 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
             
             # Display the formatted analysis (no uploaded image for search)
             st.divider()
-            render_plant_analysis_display(plant_name, analysis, mute_audio, particle_preset=particle_preset)
+            render_plant_analysis_display(plant_name, analysis, mute_audio)
             
         except Exception as e:
             st.error(f"❌ Error analyzing plant: {str(e)}")
@@ -252,8 +237,7 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                         
                         for chunk in plant_service.get_analysis_stream(plant_name):
                             analysis += chunk
-                            with stream_container.container():
-                                st.markdown(analysis)
+                            render_streaming_content(analysis, stream_container)
                     
                     content_placeholder.empty()
                     if cache_service.is_connected():
@@ -272,7 +256,6 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                 plant_name, 
                 analysis, 
                 mute_audio,
-                particle_preset=particle_preset,
                 uploaded_image_bytes=image_bytes  # Pass the uploaded image
             )
 
@@ -324,8 +307,7 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                         
                         for chunk in plant_service.get_analysis_stream(plant_name):
                             analysis += chunk
-                            with stream_container.container():
-                                st.markdown(analysis)
+                            render_streaming_content(analysis, stream_container)
                     
                     content_placeholder.empty()
                     if cache_service.is_connected():
@@ -344,7 +326,6 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                 plant_name, 
                 analysis, 
                 mute_audio,
-                particle_preset=particle_preset,
                 uploaded_image_bytes=image_bytes  # Pass the captured image
             )
 

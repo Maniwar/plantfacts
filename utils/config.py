@@ -10,7 +10,7 @@ class AppConfig:
     # App Settings
     PAGE_TITLE = "Plant Facts Explorer"
     PAGE_ICON = "🌿"
-    APP_VERSION = "3.0.0"  # Updated: Reimagined beautiful particle effects with 6 nature-themed presets
+    APP_VERSION = "4.0.0"  # Updated: Mobile-optimized, single beautiful particle effect, animated streaming
     AUTHOR = "Maniwar"
     
     # Input Methods
