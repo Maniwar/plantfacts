@@ -2,7 +2,7 @@
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
 Author: Maniwar
-Version: 2.0.0 - Updated for Streamlit 2025
+Version: 2.1.0 - Fixed streaming and caching issues
 """
 
 import streamlit as st
@@ -53,15 +53,6 @@ def init_services():
 
 plant_service, cache_service = init_services()
 
-# Verify service methods exist (for debugging)
-if st.secrets.get("DEBUG", False):
-    required_methods = ['is_ready', 'get_cached_analysis', 'get_analysis_stream', 'identify_plant_from_image']
-    for method in required_methods:
-        if not hasattr(plant_service, method):
-            st.error(f"Missing method: {method}")
-        else:
-            st.success(f"✓ Method exists: {method}")
-
 # Check if services are ready
 if not plant_service.is_ready():
     st.error("⚠️ OpenAI API not configured. Please add OPENAI_API_KEY to your secrets.")
@@ -73,7 +64,7 @@ render_custom_css()
 # Render header
 render_header()
 
-# Show cache status in sidebar (for debugging)
+# Show cache status in sidebar
 with st.sidebar:
     st.markdown("### 🔧 System Status")
     if cache_service.is_connected():
@@ -98,26 +89,12 @@ with st.sidebar:
     else:
         st.warning("⚠️ Cache: Disabled")
         st.caption("App works without caching")
-        with st.expander("Redis Setup Help"):
-            st.markdown("""
-            **Options to enable caching:**
-            1. **Local Redis**: `docker run -p 6379:6379 redis`
-            2. **Redis Cloud**: Free tier at redis.com
-            3. **Upstash**: Serverless Redis at upstash.com
-            
-            Add to `.streamlit/secrets.toml`:
-            ```
-            REDIS_HOST = "your-host"
-            REDIS_PORT = 6379
-            REDIS_PASSWORD = "your-password"
-            ```
-            """)
     
     st.divider()
     st.markdown("### 📊 App Info")
     st.caption(f"Version: {config.APP_VERSION}")
     st.caption(f"Author: {config.AUTHOR}")
-    st.caption("Cache TTL: No expiration (permanent)")  # Cache never expires
+    st.caption("Cache TTL: No expiration")
 
 # Input method selector with modern styling
 with st.container():
@@ -158,29 +135,38 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
             # Normalize plant name for consistent caching
             plant_name = plant_name.strip().title()
             
-            # Check cache first (with fallback for missing method)
-            cached_analysis = None
-            if hasattr(plant_service, 'get_cached_analysis'):
-                cached_analysis = plant_service.get_cached_analysis(plant_name)
+            # Create a placeholder for the content
+            content_placeholder = st.empty()
+            
+            # Check cache first
+            cached_analysis = plant_service.get_cached_analysis(plant_name)
             
             if cached_analysis:
-                # Display cached content instantly
+                # Display cached content instantly in formatted view
                 st.info("💾 Loading from cache - instant results!")
                 analysis = cached_analysis
-                # Show debug info in development
-                if st.secrets.get("DEBUG", False):
-                    st.caption(f"Cache hit: {len(cached_analysis)} characters")
             else:
-                # Stream new content
-                with st.spinner("🌿 Analyzing plant information..."):
-                    if hasattr(plant_service, 'get_analysis_stream'):
-                        analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
-                    else:
-                        st.error("PlantService missing required methods. Please refresh the page.")
-                        st.stop()
+                # Stream new content into a temporary container
+                st.info("🌿 Generating new analysis...")
+                
+                # Use a container for streaming that will be replaced
+                with content_placeholder.container():
+                    st.markdown("### 📝 Live Analysis Stream")
+                    analysis = ""
+                    stream_container = st.empty()
+                    
+                    # Stream the content and accumulate it
+                    for chunk in plant_service.get_analysis_stream(plant_name):
+                        analysis += chunk
+                        # Update the streaming display
+                        with stream_container.container():
+                            st.markdown(analysis)
+                
+                # Clear the placeholder after streaming is complete
+                content_placeholder.empty()
                 st.success("✅ Analysis complete and cached for future use!")
             
-            # Display the analysis
+            # Display the formatted analysis (replaces the streamed content)
             st.divider()
             render_plant_analysis_display(plant_name, analysis, mute_audio)
             
@@ -213,34 +199,40 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                     plant_name = plant_service.identify_plant_from_image(image_b64)
                     st.success(f"✅ Identified: **{plant_name}**")
                 
-                # Check cache status (with method check)
-                cached_analysis = None
-                try:
-                    cached_analysis = plant_service.get_cached_analysis(plant_name)
-                except AttributeError:
-                    st.warning("Cache methods not available. Please refresh the page.")
-                    cached_analysis = None
+                # Create placeholder for content
+                content_placeholder = st.empty()
+                
+                # Check cache status
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
                 
                 if cached_analysis:
                     # Display cached content instantly
                     st.info("💾 Loading from cache - instant results!")
                     analysis = cached_analysis
-                    # Show debug info in development
-                    if st.secrets.get("DEBUG", False):
-                        st.caption(f"Cache hit: {len(cached_analysis)} characters")
                 else:
                     # Stream new content
-                    with st.spinner("🌿 Fetching detailed information..."):
-                        analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
+                    st.info("🌿 Generating detailed information...")
+                    
+                    with content_placeholder.container():
+                        st.markdown("### 📝 Live Analysis Stream")
+                        analysis = ""
+                        stream_container = st.empty()
+                        
+                        for chunk in plant_service.get_analysis_stream(plant_name):
+                            analysis += chunk
+                            with stream_container.container():
+                                st.markdown(analysis)
+                    
+                    content_placeholder.empty()
                     st.success("✅ Analysis complete and cached for future use!")
             
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
         
-        # Display analysis if successful
+        # Display formatted analysis if successful
         if 'analysis' in locals():
             st.divider()
-            render_plant_analysis_display(plant_name, analysis)
+            render_plant_analysis_display(plant_name, analysis, mute_audio)
 
 # Camera Capture Method
 elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
@@ -264,34 +256,40 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                     plant_name = plant_service.identify_plant_from_image(image_b64)
                     st.success(f"✅ Identified: **{plant_name}**")
                 
-                # Check cache status (with method check)
-                cached_analysis = None
-                try:
-                    cached_analysis = plant_service.get_cached_analysis(plant_name)
-                except AttributeError:
-                    st.warning("Cache methods not available. Please refresh the page.")
-                    cached_analysis = None
+                # Create placeholder for content
+                content_placeholder = st.empty()
+                
+                # Check cache status
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
                 
                 if cached_analysis:
                     # Display cached content instantly
                     st.info("💾 Loading from cache - instant results!")
                     analysis = cached_analysis
-                    # Show debug info in development
-                    if st.secrets.get("DEBUG", False):
-                        st.caption(f"Cache hit: {len(cached_analysis)} characters")
                 else:
                     # Stream new content
-                    with st.spinner("🌿 Fetching detailed information..."):
-                        analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
+                    st.info("🌿 Generating detailed information...")
+                    
+                    with content_placeholder.container():
+                        st.markdown("### 📝 Live Analysis Stream")
+                        analysis = ""
+                        stream_container = st.empty()
+                        
+                        for chunk in plant_service.get_analysis_stream(plant_name):
+                            analysis += chunk
+                            with stream_container.container():
+                                st.markdown(analysis)
+                    
+                    content_placeholder.empty()
                     st.success("✅ Analysis complete and cached for future use!")
             
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
         
-        # Display analysis if successful
+        # Display formatted analysis if successful
         if 'analysis' in locals():
             st.divider()
-            render_plant_analysis_display(plant_name, analysis)
+            render_plant_analysis_display(plant_name, analysis, mute_audio)
 
 # Footer
 render_legal_footer()
