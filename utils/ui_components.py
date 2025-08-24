@@ -67,7 +67,7 @@ render_custom_css()
 render_header()
 
 # Show cache status at the top (no sidebar)
-with st.expander("🔧 System Status", expanded=true):
+with st.expander("🔧 System Status", expanded=False):
     col1, col2, col3 = st.columns(3)
     
     with col1:
