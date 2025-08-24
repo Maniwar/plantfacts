@@ -117,8 +117,8 @@ def render_header(
 # =========================================================
 def render_particles(
     enabled: bool = False,
-    height: int = 320,
-    preset: str = "aurora",   # "aurora" | "constellation" | "leaves"
+    height: int = 100,
+    preset: str = "leaves",   # "aurora" | "constellation" | "leaves"
     watermark_text: str = "AI Analysis",
     watermark_opacity: float = 0.12,
     intensity: float = 1.0,   # 0.5..1.5 scales motion/quantity
