@@ -2,7 +2,7 @@
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
 Author: Maniwar
-Version: 2.2.0 - Removed sidebar, improved cache handling
+Version: 2.2.1 - Fixed mute_audio bug in all input methods
 """
 
 import streamlit as st
@@ -194,6 +194,8 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
             type=['jpg', 'jpeg', 'png'],
             help="Supported formats: JPG, PNG"
         )
+        
+        mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_upload")
     
     if uploaded_image:
         col1, col2 = st.columns([1, 2], gap="medium")
@@ -256,6 +258,7 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
         st.subheader("📸 Capture Plant Image")
         
         captured_image = st.camera_input("Take a photo of your plant")
+        mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_camera")
     
     if captured_image:
         col1, col2 = st.columns([1, 2], gap="medium")
