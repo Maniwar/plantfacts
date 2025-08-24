@@ -1,4 +1,6 @@
+streamlit
 openai
 gtts
 streamlit_searchbox
 redis
+requests
