@@ -390,12 +390,6 @@ with st.expander("🔧 System Status", expanded=False):
                 if plant_service.get_cached_analysis(test_plant_normalized):
                     st.success(f"✅ '{test_plant_normalized}' is in cache")
                     col_a, col_b = st.columns([1, 3])
-                    with col_a:
-                        if st.button("🗑️ Clear this cache entry", key="clear_cache"):
-                            cache_key = f"{config.CACHE_KEY_PREFIX}{test_plant_normalized}"
-                            if cache_service.delete(cache_key):
-                                st.info(f"Cleared cache for '{test_plant_normalized}'")
-                                st.rerun()
                 else:
                     st.info(f"❌ '{test_plant_normalized}' not cached yet")
 # Footer
