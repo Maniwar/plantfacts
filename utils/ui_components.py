@@ -115,26 +115,27 @@ def render_header(
 # =========================================================
 # Optional particle background (JS in iframe)
 # =========================================================
-def render_particles(enabled: bool = False, plant_name: str = "") -> None:
+def render_particles(enabled: bool = False, plant_name: str = "", height: int = 260, opacity: float = 0.12) -> None:
     """
-    Draw a soft, centered watermark using the plant name.
-    - Single large char particle
-    - Low opacity, slow drift
-    - Pointer-events disabled; zIndex behind app content
+    Render a single, subtle watermark of the plant name behind the UI area.
+    - Uses an iframe with a visible height (default 260px)
+    - Pointer-events disabled (doesn't block clicks)
+    - Deterministic position (center) with very light opacity
     """
     if not enabled:
         return
 
     import json
+    from streamlit import components
 
     label = (plant_name or "Plant").strip()
-    seed = abs(hash(label)) % (10**6)
 
     html_code = """
     <!doctype html><html><head><meta charset="utf-8"/>
     <style>
       html,body,#tsp {{ margin:0; padding:0; height:100%; width:100%; background:transparent; }}
-      #tsp {{ position:fixed; inset:0; pointer-events:none; z-index:0; }}
+      /* The canvas stays inside this iframe area; we keep it non-interactive. */
+      #tsp {{ position:relative; pointer-events:none; z-index:0; }}
     </style></head><body>
       <div id="tsp"></div>
       <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
@@ -144,52 +145,35 @@ def render_particles(enabled: bool = False, plant_name: str = "") -> None:
           const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
           const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
           const base = Math.min(vw, vh);
-          const fontSize = Math.max(48, Math.min(0.18 * base, 220));
+          const fontSize = Math.max(48, Math.min(0.18 * base, 220)); // responsive size
 
           await engine.load("tsp", {{
-            autoPlay: true,
             detectRetina: true,
             fullScreen: {{ enable: false }},
-            fpsLimit: 45,
             background: {{ color: {{ value: "transparent" }} }},
-            particles: {{
-              number: {{ value: 1 }},
-              move: {{
-                enable: true,
-                speed: 0.15,
-                direction: "none",
-                random: false,
-                straight: false,
-                drift: 0,
-                outModes: {{ default: "out" }}
-              }},
-              opacity: {{
-                value: 0.07,
-                animation: {{ enable: true, speed: 0.1, minimumValue: 0.04, startValue: "random" }}
-              }},
-              rotate: {{
-                value: 0,
-                direction: "random",
-                animation: {{ enable: true, speed: 2 }}
-              }},
-              size: {{ value: fontSize }},
-              color: {{ value: ["#ffffff", "#cbd5e1"] }},
-              shape: {{
-                type: "char",
-                options: {{
-                  char: [{{
-                    value: {label_json},
-                    font: "Space Grotesk, Inter, system-ui, -apple-system",
-                    style: "",
-                    weight: "700",
-                    fill: true
-                  }}]
+            fpsLimit: 45,
+            particles: {{ number: {{ value: 0 }} }}, // we'll inject our single particle manually
+            manualParticles: [{{
+              position: {{ x: 50, y: 50 }}, // center (percent)
+              options: {{
+                move: {{ enable: true, speed: 0.15, outModes: {{ default: "out" }} }},
+                opacity: {{ value: {opacity} }},
+                rotate: {{ direction: "random", animation: {{ enable: true, speed: 2 }} }},
+                size: {{ value: fontSize }},
+                color: {{ value: ["#ffffff", "#cbd5e1"] }},
+                shape: {{
+                  type: "char",
+                  options: {{
+                    char: [{{
+                      value: {label_json},
+                      font: "Space Grotesk, Inter, system-ui, -apple-system",
+                      style: "",
+                      weight: "700",
+                      fill: true
+                    }}]
+                  }}
                 }}
               }}
-            }},
-            // deterministic placement based on seed (roughly center-ish)
-            manualParticles: [{{
-              position: {{ x: (({seed} % 30) + 35), y: (({seed} % 30) + 35) }}
             }}]
           }});
         }})();
@@ -197,9 +181,9 @@ def render_particles(enabled: bool = False, plant_name: str = "") -> None:
     </body></html>
     """
 
-    components.html(
-        html_code.format(label_json=json.dumps(label), seed=seed),
-        height=0,           # fixed overlay; no extra layout space
+    components.v1.html(
+        html_code.format(label_json=json.dumps(label), opacity=opacity),
+        height=height,      # <-- visible area for the watermark canvas
         scrolling=False,
     )
 
