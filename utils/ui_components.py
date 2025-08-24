@@ -118,15 +118,15 @@ def render_header(
 def render_particles(
     enabled: bool = False,
     plant_name: str = "",
-    height: int = 280,
+    height: int = 300,
     opacity: float = 0.12,
-    show_dots: bool = True,   # background linked particles like before
+    show_dots: bool = True,
 ) -> None:
     """
     Background visuals:
-      • Linked 'dot' particles (optional, like your earlier effect)
-      • One large, subtle watermark of the PLANT NAME (centered, slow drift)
-    Uses a visible iframe height so it's actually shown.
+      • Linked dot particles (optional)
+      • One large, subtle watermark with the PLANT NAME (HTML/CSS, always visible)
+    The iframe has a visible height so you can actually see it.
     """
     if not enabled:
         return
@@ -134,76 +134,80 @@ def render_particles(
     import json
     from streamlit.components.v1 import html as _html_iframe
 
-    label = (plant_name or "").strip()
-    if not label:
-        # If this ever triggers, the caller didn't pass the name.
-        # We'll still show something, but you *should* pass plant_name.
-        label = "Plant"
-
-    # Deterministic seed to slightly vary dot layout per plant
+    label = (plant_name or "Plant").strip()
     seed = abs(hash(label)) % (10**6)
     dot_count = 34 if show_dots else 0
 
+    # We avoid Python f-strings to prevent `{}` conflicts with JS.
     html_code = """
     <!doctype html><html><head><meta charset="utf-8"/>
     <style>
-      html,body,#tsp { margin:0; padding:0; height:100%; width:100%; background:transparent; }
-      /* Do not block clicks on the app */
-      #tsp { position:relative; pointer-events:none; z-index:0; }
-    </style></head><body>
-      <div id="tsp"></div>
+      :root { --wm-opacity: __OPACITY__; }
+      html,body,#stage { margin:0; padding:0; height:100%; width:100%; background:transparent; }
+
+      /* Stage holds both particles and watermark */
+      #stage { position:relative; pointer-events:none; }
+
+      /* tsParticles mounts here, behind the watermark */
+      #tsp { position:absolute; inset:0; z-index:0; }
+
+      /* Watermark text */
+      #wm {
+        position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+        font: 700 clamp(48px, 18vw, 220px) "Space Grotesk", Inter, system-ui, -apple-system, sans-serif;
+        letter-spacing: .04em;
+        color: #ffffff;
+        opacity: var(--wm-opacity);
+        text-shadow: 0 2px 14px rgba(0,0,0,.25);
+        z-index: 1;
+        white-space: nowrap;
+        user-select: none;
+        -webkit-user-select: none;
+        animation: floatSlow 18s ease-in-out infinite;
+      }
+
+      @keyframes floatSlow {
+        0%   { transform: translate(-50%,-50%) rotate(0deg); }
+        50%  { transform: translate(calc(-50% + 6px), calc(-50% - 6px)) rotate(3deg); }
+        100% { transform: translate(-50%,-50%) rotate(0deg); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #wm { animation: none; }
+      }
+    </style>
+    </head><body>
+      <div id="stage">
+        <div id="tsp"></div>
+        <div id="wm"></div>
+      </div>
+
       <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
       <script>
         (async () => {
-          const engine = window.tsParticles;
+          // Set watermark text safely
+          const wm = document.getElementById("wm");
+          wm.textContent = __LABEL_JSON__;
 
-          // Responsive font size for the watermark
-          const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-          const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-          const base = Math.min(vw, vh);
-          const fontSize = Math.max(54, Math.min(0.18 * base, 240));
-
-          await engine.load("tsp", {
-            detectRetina: true,
-            fullScreen: { enable: false },  // keep inside iframe
-            background: { color: { value: "transparent" } },
-            fpsLimit: 45,
-            particles: {
-              number: { value: DOT_COUNT, density: { enable: true, area: 800 } },
-              color: { value: ["#a7f3d0", "#93c5fd", "#c4b5fd"] },
-              opacity: { value: 0.25 },
-              size: { value: { min: 1, max: 3 } },
-              move: { enable: true, speed: 0.8, direction: "none", outModes: { default: "out" } },
-              links: { enable: DOT_COUNT > 0, distance: 120, opacity: 0.12, color: "#cbd5e1" }
-            },
-            // Single large text particle as a watermark
-            manualParticles: [{
-              position: {
-                // deterministic but varied center-ish placement per plant
-                x: ((SEED % 30) + 35),
-                y: (((SEED / 7) % 30) + 35)
-              },
-              options: {
-                move: { enable: true, speed: 0.15, outModes: { default: "out" } },
-                opacity: { value: WATERMARK_OPACITY },
-                rotate: { direction: "random", animation: { enable: true, speed: 2 } },
-                size: { value: fontSize },
-                color: { value: ["#ffffff", "#cbd5e1"] },
-                shape: {
-                  type: "char",
-                  options: {
-                    char: [{
-                      value: LABEL_JSON,
-                      font: "Space Grotesk, Inter, system-ui, -apple-system",
-                      style: "",
-                      weight: "700",
-                      fill: true
-                    }]
-                  }
-                }
+          // Init particles (dots) if requested
+          const DOT_COUNT = __DOT_COUNT__;
+          if (DOT_COUNT > 0) {
+            const engine = window.tsParticles;
+            await engine.load("tsp", {
+              detectRetina: true,
+              fullScreen: { enable: false },
+              background: { color: { value: "transparent" } },
+              fpsLimit: 45,
+              particles: {
+                number: { value: DOT_COUNT, density: { enable: true, area: 800 } },
+                color: { value: ["#a7f3d0", "#93c5fd", "#c4b5fd"] },
+                opacity: { value: 0.25 },
+                size: { value: { min: 1, max: 3 } },
+                move: { enable: true, speed: 0.8, direction: "none", outModes: { default: "out" } },
+                links: { enable: true, distance: 120, opacity: 0.12, color: "#cbd5e1" }
               }
-            }]
-          });
+            });
+          }
         })();
       </script>
     </body></html>
@@ -211,10 +215,9 @@ def render_particles(
 
     _html_iframe(
         html_code
-        .replace("LABEL_JSON", json.dumps(label))
-        .replace("SEED", str(seed))
-        .replace("DOT_COUNT", str(dot_count))
-        .replace("WATERMARK_OPACITY", str(opacity)),
+        .replace("__LABEL_JSON__", json.dumps(label))
+        .replace("__DOT_COUNT__", str(dot_count))
+        .replace("__OPACITY__", str(opacity)),
         height=height,      # visible canvas area
         scrolling=False,
     )
