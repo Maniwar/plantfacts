@@ -121,7 +121,7 @@ def render_particles(
     preset: str = "leaves",   # "aurora" | "constellation" | "leaves"
     watermark_text: str = "AI Analysis",
     watermark_opacity: float = 0.12,
-    intensity: float = 1.5,   # 0.5..1.5 scales motion/quantity
+    intensity: float = 1.0,   # 0.5..1.5 scales motion/quantity
     show_watermark: bool = True,
 ) -> None:
     """
