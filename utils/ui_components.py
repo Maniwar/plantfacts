@@ -2,7 +2,7 @@
 UI Components Module
 Verbatim LLM rendering + animations (leaf, sheen, typewriter), reliable images
 Author: Maniwar
-Version: 7.0.0 - Mobile-optimized, single stunning particle effect, streaming animations
+Version: 7.1.0 - Fixed mobile header cutoff with responsive subtitles
 """
 
 from __future__ import annotations
@@ -40,11 +40,18 @@ def load_custom_css() -> None:
           .header {
             position:relative; overflow:hidden;
             background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 100%);
-            padding: 1.5rem 1rem; 
+            padding: 1.2rem 1rem; 
             border-radius: var(--panel-radius);
             color:#fff; 
             box-shadow:0 16px 36px rgba(0,0,0,.15); 
             margin-bottom: 1rem;
+            min-height: auto;
+          }
+          
+          @media (min-width: 769px) {
+            .header {
+              padding: 2rem 1.5rem;
+            }
           }
           
           .sheen { 
@@ -77,20 +84,53 @@ def load_custom_css() -> None:
             word-break: break-word;
           }
 
-          /* Typewriter subtitle - Mobile Optimized */
-          .subtitle { 
+          /* Subtitle - Responsive with different text */
+          .subtitle-wrapper { 
             margin:.45rem 0 0 0; 
-            font-size: clamp(0.85rem, 3vw, 1rem);
           }
           
-          .typewriter {
-            display:inline-block; 
-            overflow:hidden; 
-            white-space:nowrap;
-            border-right:.12em solid rgba(255,255,255,.85);
-            animation: typing 3s steps(40,end), blink .85s step-end infinite;
-            max-width:100%;
-            opacity:.95;
+          .subtitle-desktop, .subtitle-mobile {
+            font-size: clamp(0.85rem, 3vw, 1rem);
+            opacity: 0.95;
+            line-height: 1.4;
+            color: rgba(255, 255, 255, 0.95);
+          }
+          
+          /* Show desktop subtitle with typewriter on larger screens */
+          .subtitle-desktop {
+            display: none;
+          }
+          
+          @media (min-width: 769px) {
+            .subtitle-desktop {
+              display: inline-block;
+              overflow: hidden;
+              white-space: nowrap;
+              border-right: .12em solid rgba(255,255,255,.85);
+              animation: typing 3s steps(40,end), blink .85s step-end infinite;
+              max-width: 100%;
+            }
+            .subtitle-mobile {
+              display: none;
+            }
+          }
+          
+          /* Show mobile subtitle with wrapping on small screens */
+          .subtitle-mobile {
+            display: block;
+            white-space: normal;
+            animation: fadeIn 1s ease-out;
+          }
+          
+          @media (min-width: 769px) {
+            .subtitle-mobile {
+              display: none;
+            }
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 0.95; transform: translateY(0); }
           }
 
           .bar-title {
@@ -166,19 +206,27 @@ def load_custom_css() -> None:
           /* Mobile-specific adjustments */
           @media (max-width: 768px) {
             .header {
-              padding: 1.2rem 0.8rem;
+              padding: 1rem 0.8rem;
             }
             
             .title-row {
-              gap: 0.4rem;
+              gap: 0.3rem;
             }
             
             .leaf {
-              font-size: 1.5rem;
+              font-size: 1.4rem;
             }
             
-            .subtitle {
-              margin-top: 0.3rem;
+            .headline {
+              font-size: 1.4rem !important;
+            }
+            
+            .subtitle-wrapper {
+              margin-top: 0.25rem;
+            }
+            
+            .subtitle-mobile {
+              font-size: 0.9rem !important;
             }
           }
 
@@ -202,16 +250,11 @@ def load_custom_css() -> None:
 
 def render_header(
     subtitle: str = "Discover the amazing world of plants with AI-powered insights",
+    subtitle_mobile: str = "AI-powered plant care guide",
     show_leaf: bool = True,
-    typewriter: bool = True,
 ) -> None:
     """Render header with mobile-optimized layout"""
     leaf = '<span class="leaf">🌿</span>' if show_leaf else ""
-    sub_html = (
-        f'<div class="subtitle"><span class="typewriter">{_html.escape(subtitle)}</span></div>'
-        if typewriter
-        else f'<div class="subtitle" style="opacity:.95;">{_html.escape(subtitle)}</div>'
-    )
     st.html(
         f"""
         <div class="header">
@@ -220,7 +263,10 @@ def render_header(
             {leaf}
             <div class="headline">Plant Facts Explorer</div>
           </div>
-          {sub_html}
+          <div class="subtitle-wrapper">
+            <div class="subtitle-desktop">{_html.escape(subtitle)}</div>
+            <div class="subtitle-mobile">{_html.escape(subtitle_mobile)}</div>
+          </div>
         </div>
         """
     )
@@ -797,8 +843,6 @@ def render_plant_analysis_display(
     analysis: str,
     mute_audio: bool = True,
     particles: bool = True,
-    floating_leaf: bool = True,
-    typewriter_subtitle: bool = True,
     allow_model_html: bool = True,
     show_header: bool = False,
     uploaded_image_bytes: Optional[bytes] = None,
@@ -812,7 +856,7 @@ def render_plant_analysis_display(
 
     # Only render the big gradient header if explicitly requested
     if show_header:
-        render_header(show_leaf=floating_leaf, typewriter=typewriter_subtitle)
+        render_header()
 
     st.html(f'<div class="bar-title">🌱 Analysis: {_html.escape(plant_name)}</div>')
 
@@ -870,7 +914,7 @@ def render_legal_footer() -> None:
         """
         <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
              background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
-          <div>🌿 Plant Facts Explorer • Version 7.0.0</div>
+          <div>🌿 Plant Facts Explorer • Version 7.1.0</div>
           <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
         </div>
         """

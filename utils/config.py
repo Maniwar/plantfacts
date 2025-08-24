@@ -10,7 +10,7 @@ class AppConfig:
     # App Settings
     PAGE_TITLE = "Plant Facts Explorer"
     PAGE_ICON = "🌿"
-    APP_VERSION = "4.0.0"  # Updated: Mobile-optimized, single beautiful particle effect, animated streaming
+    APP_VERSION = "4.1.0"  # Updated: Fixed mobile header cutoff with responsive subtitle
     AUTHOR = "Maniwar"
     
     # Input Methods
