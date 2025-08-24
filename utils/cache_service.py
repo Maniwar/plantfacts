@@ -16,12 +16,28 @@ class CacheService:
     def __init__(self):
         """Initialize Redis connection using Streamlit secrets"""
         try:
+            # Check if Redis secrets exist
+            if not all(key in st.secrets for key in ["REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD"]):
+                logger.warning("Redis secrets not found in st.secrets")
+                self.redis_client = None
+                self.connected = False
+                self.error_message = "Redis credentials not configured"
+                return
+            
+            # Get connection parameters
+            host = st.secrets["REDIS_HOST"]
+            port = int(st.secrets["REDIS_PORT"])
+            password = st.secrets["REDIS_PASSWORD"]
+            
+            logger.info(f"Attempting Redis connection to {host}:{port}")
+            
             self.redis_client = redis.Redis(
-                host=st.secrets["REDIS_HOST"],
-                port=st.secrets["REDIS_PORT"],
-                password=st.secrets["REDIS_PASSWORD"],
+                host=host,
+                port=port,
+                password=password if password else None,  # Handle empty password
                 decode_responses=True,
                 socket_keepalive=True,
+                socket_connect_timeout=5,  # 5 second timeout
                 socket_keepalive_options={
                     1: 1,  # TCP_KEEPIDLE
                     2: 1,  # TCP_KEEPINTVL
@@ -31,11 +47,23 @@ class CacheService:
             # Test connection
             self.redis_client.ping()
             self.connected = True
-            logger.info("Redis connection established successfully")
-        except Exception as e:
-            logger.warning(f"Redis connection failed: {e}. Cache disabled.")
+            self.error_message = None
+            logger.info(f"Redis connection established successfully to {host}:{port}")
+        except KeyError as e:
+            logger.error(f"Missing Redis configuration key: {e}")
             self.redis_client = None
             self.connected = False
+            self.error_message = f"Missing config: {e}"
+        except redis.ConnectionError as e:
+            logger.error(f"Redis connection failed: {e}")
+            self.redis_client = None
+            self.connected = False
+            self.error_message = f"Connection failed: Check if Redis server is running"
+        except Exception as e:
+            logger.error(f"Unexpected error connecting to Redis: {e}")
+            self.redis_client = None
+            self.connected = False
+            self.error_message = str(e)
     
     def get(self, key: str) -> Optional[str]:
         """
@@ -132,3 +160,7 @@ class CacheService:
     def is_connected(self) -> bool:
         """Check if Redis is connected and available"""
         return self.connected
+    
+    def get_error_message(self) -> Optional[str]:
+        """Get connection error message if any"""
+        return getattr(self, 'error_message', None)
