@@ -2,7 +2,7 @@
 UI Components Module
 Reusable UI components with better image handling and improved UX
 Author: Maniwar
-Version: 2.9.0 - Wikipedia images + clean headers (no expanders/cards)
+Version: 2.10.0 - Clean sections: strip duplicate headings, normalize subheaders; Wikipedia images
 """
 
 import re
@@ -63,14 +63,14 @@ def load_custom_css():
             background: rgba(30,41,59,0.9); border-color: #475569;
         }
 
-        /* Section header (replaces expanders/cards) */
+        /* Section header (simple, stable) */
         .section-hdr {
             display:flex; align-items:center; gap:10px;
             padding: .55rem .8rem;
             border: 1px solid rgba(148,163,184,.35);
             background: linear-gradient(135deg, rgba(102,126,234,.12), rgba(118,75,162,.12));
             border-radius: 10px;
-            font-weight: 700; margin: .9rem 0 .25rem 0;
+            font-weight: 700; margin: .9rem 0 .4rem 0;
             font-family: 'Space Grotesk', sans-serif;
         }
 
@@ -136,7 +136,6 @@ def _wiki_search(query: str) -> Optional[str]:
             "utf8": 1,
             "format": "json",
             "srlimit": 5,
-            "srqiprofile": "classic",
         }
         r = requests.get(api, params=params, timeout=6)
         if r.status_code == 200:
@@ -188,7 +187,7 @@ def get_plant_image_info(plant_name: str) -> Dict[str, Optional[str]]:
         if img_url:
             return {"url": img_url, "caption": f"🔗 Wikipedia: {page_title}", "page_url": page}
 
-    # Neutral, obviously generic placeholder (never misleading)
+    # Neutral placeholder (obviously generic)
     seed = quote(plant_name.lower())
     return {
         "url": f"https://picsum.photos/seed/{seed}/800/600",
@@ -197,7 +196,6 @@ def get_plant_image_info(plant_name: str) -> Dict[str, Optional[str]]:
     }
 
 
-# Backwards-compat simple accessor
 def get_plant_image_url(plant_name: str) -> str:
     return get_plant_image_info(plant_name)["url"]
 
@@ -257,26 +255,73 @@ def clean_text_for_tts(text: str) -> str:
     return text
 
 
+# ---------- Normalizers for section bodies ----------
+_HEADING_WORDS = [
+    "overview",
+    "general information",
+    "care instructions",
+    "toxicity",
+    "propagation",
+    "common issues",
+    "problems",
+    "interesting facts",
+]
+
+_EMOJI_BULLETS = r"[\-\*\u2022●◦▪️▫️■□☑️✅➤▶️►▸▹▻▪︎▫︎🔹🔸⭐️✨💡📌📝🌱⚠️🌿🐛🔧🔬🎯]"
+
+def _strip_leading_section_line(text: str, title: str) -> str:
+    """
+    Remove a first line like '1. General Information:' or 'General Information:' (case-insensitive).
+    """
+    lines = text.splitlines()
+    if not lines:
+        return text
+    first = lines[0].strip().lower().rstrip(".:")
+    t = title.strip().lower()
+    # matches "1. Title", "Title", "1 Title", "Title:"
+    if re.match(rf"^(?:\d+\s*[\.\)]\s*)?{re.escape(t)}$", first):
+        return "\n".join(lines[1:]).lstrip("\n")
+    return text
+
+
 def _normalize_subheaders(md: str) -> str:
     """
-    Normalize internal noisy headings:
-      - '### Title' -> '**Title:**'
-      - '#### Title' / '##### Title' -> '**Title:**'
-      - '1. General Information:' at start of line -> '**General Information:**'
-    Preserve lists/paragraphs.
+    Normalize noisy internal headings to compact bold labels.
+    - '### Title' or deeper -> '**Title:**'
+    - '📌 **Title**' / bullet+bold -> '**Title:**'
+    - '1. **Title**' -> '**Title:**'
+    - Ensure trailing colon; collapse duplicate spaces.
     """
     def h_repl(m: re.Match) -> str:
-        title = m.group(1).strip().strip("#").strip()
-        if title.endswith(":") is False:
+        title = m.group(1)
+        # Remove leading emojis/bullets within the captured title
+        title = re.sub(rf"^{_EMOJI_BULLETS}\s*", "", title).strip()
+        title = re.sub(r"[*_`#]+", "", title).strip()
+        if not title.endswith(":"):
             title += ":"
         return f"**{title}**"
 
-    # Convert H2+ lines to bold labels
+    # ### / #### / etc -> bold labels
     md = re.sub(r"^\s*#{2,6}\s+([^\n#].*?)\s*$", h_repl, md, flags=re.MULTILINE)
 
-    # Convert '1. General Information:' style numerals to bold at line starts
-    md = re.sub(r"^\s*\d+\.\s*([A-Za-z][^\n:]*?)\s*:\s*$", lambda m: f"**{m.group(1).strip()}:**", md, flags=re.MULTILINE)
+    # Bullet/emoji + **Heading** -> bold label
+    md = re.sub(rf"^\s*{_EMOJI_BULLETS}\s*\*\*\s*([^\*].*?)\s*\*\*\s*:?\s*$", h_repl, md, flags=re.MULTILINE)
 
+    # Numbered + **Heading** -> bold label
+    md = re.sub(r"^\s*\d+\s*[\.\)]\s*\*\*\s*(.*?)\s*\*\*\s*:?\s*$", h_repl, md, flags=re.MULTILINE)
+
+    # Plain '**Heading**' lines -> bold label with colon
+    md = re.sub(r"^\s*\*\*\s*([^\*].*?)\s*\*\*\s*$", h_repl, md, flags=re.MULTILINE)
+
+    # Remove accidental double asterisks around labels like '**Common Name**' already handled
+    md = re.sub(r"\*\*\s*\*\*(.*?)\*\*\s*\*\*", r"**\1**", md)
+
+    # Strip repeated numeric top-lines like '1. General Information:' anywhere
+    for word in _HEADING_WORDS:
+        md = re.sub(rf"^\s*\d+\s*[\.\)]\s*{re.escape(word)}\s*:\s*$", "", md, flags=re.IGNORECASE | re.MULTILINE)
+
+    # Collapse extra blank lines
+    md = re.sub(r"\n{3,}", "\n\n", md).strip()
     return md
 
 
@@ -293,23 +338,25 @@ def _detect_section(raw: str) -> Tuple[str, str, str, SectionStyle]:
     lower = text.lower()
 
     heading_patterns = [
-        (r'^\s*\*\*\s*(?:\d+\.\s*)?(general information)\s*:?\s*\*\*\s*', "📝", "markdown"),
-        (r'^\s*\*\*\s*(?:\d+\.\s*)?(care instructions)\s*:?\s*\*\*\s*', "🌱", "markdown"),
-        (r'^\s*\*\*\s*(?:\d+\.\s*)?(toxicity)\s*:?\s*\*\*\s*', "⚠️", "warning"),
-        (r'^\s*\*\*\s*(?:\d+\.\s*)?(propagation)\s*:?\s*\*\*\s*', "🌿", "markdown"),
-        (r'^\s*\*\*\s*(?:\d+\.\s*)?(common issues|problems)\s*:?\s*\*\*\s*', "🐛", "markdown"),
-        (r'^\s*\*\*\s*(?:\d+\.\s*)?(interesting facts)\s*:?\s*\*\*\s*', "💡", "info"),
+        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(general information)\s*:?\s*\*\*\s*', "📝", "markdown"),
+        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(care instructions)\s*:?\s*\*\*\s*', "🌱", "markdown"),
+        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(toxicity)\s*:?\s*\*\*\s*', "⚠️", "warning"),
+        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(propagation)\s*:?\s*\*\*\s*', "🌿", "markdown"),
+        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(common issues|problems)\s*:?\s*\*\*\s*', "🐛", "markdown"),
         (r'^\s*\*\*\s*(overview)\s*:?\s*\*\*\s*', "📌", "markdown"),
+        (r'^\s*#{2,6}\s+(overview)\s*$', "📌", "markdown"),
     ]
 
-    # Bold heading detection
+    # Bold/### heading detection
     for pat, icon, style in heading_patterns:
-        m = re.search(pat, text, flags=re.IGNORECASE)
+        m = re.search(pat, text, flags=re.IGNORECASE | re.MULTILINE)
         if m:
             title = m.group(1).title()
-            content = text[m.end():].strip()
+            # remove only the matched heading part (up to end of line)
+            content = text[m.end():].lstrip()
             if "toxicity" in title.lower() and (("not toxic" in lower) or ("non-toxic" in lower) or ("non toxic" in lower)):
                 style = "success"
+            content = _strip_leading_section_line(content, title)
             return icon, title, content, style
 
     # Keyword fallback
@@ -327,6 +374,7 @@ def _detect_section(raw: str) -> Tuple[str, str, str, SectionStyle]:
             title = key.title()
             if "toxicity" in key and (("not toxic" in lower) or ("non-toxic" in lower) or ("non toxic" in lower)):
                 style = "success"
+            text = _strip_leading_section_line(text, title)
             return icon, title, text, style
 
     # Fallback: derive from first line
@@ -334,6 +382,7 @@ def _detect_section(raw: str) -> Tuple[str, str, str, SectionStyle]:
     title = first_line.split(":")[0].strip()
     if len(title) > 60:
         title = " ".join(title.split()[:8])
+    text = _strip_leading_section_line(text, title)
     return "📌", (title or "Details"), text, "markdown"
 
 
@@ -345,7 +394,7 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
     Render plant analysis with:
       - Header bar
       - Left: image + quick facts (+ optional audio)
-      - Right: clean, non-collapsible sections with icon + title
+      - Right: clean sections with icon + title; duplicate headings removed
     """
     with st.container():
         # Header bar
@@ -402,7 +451,7 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
 
             # If first chunk looks like an overall report title/intro, render as "Overview"
             if chunks and (chunks[0].lstrip().startswith("#") or "report" in chunks[0].lower()):
-                overview = _normalize_subheaders(chunks[0])
+                overview = _normalize_subheaders(_strip_leading_section_line(chunks[0], "Overview"))
                 st.markdown('<div class="section-hdr">📌 Overview</div>', unsafe_allow_html=True)
                 st.markdown(overview)
                 chunks = chunks[1:]
@@ -411,14 +460,9 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
             for section in chunks:
                 if not section.strip():
                     continue
-
                 icon, title, content, style = _detect_section(section)
-
-                # Header line (simple and reliable)
                 st.markdown(f'<div class="section-hdr">{icon} {title}</div>', unsafe_allow_html=True)
-
                 body = _normalize_subheaders(content)
-
                 if style == "warning":
                     st.warning(body)
                 elif style == "success":
@@ -433,14 +477,11 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
 # Public helpers
 # =========================
 def render_custom_css():
-    """Apply beautiful custom CSS styles with dark theme support"""
     load_custom_css()
 
 
 def render_legal_footer():
-    """Render beautiful legal disclaimer and footer"""
     st.divider()
-
     with st.expander("📜 Legal & Privacy Information"):
         st.markdown(
             """
@@ -459,12 +500,11 @@ def render_legal_footer():
             Released under MIT License
             """
         )
-
     st.markdown(
         """
         <div class="footer-container">
             <h3>🌿 Plant Facts Explorer</h3>
-            <p>Made with ❤️ by Maniwar • Version 2.9.0</p>
+            <p>Made with ❤️ by Maniwar • Version 2.10.0</p>
             <p style="opacity: 0.8; font-size: 0.9rem;">© 2024 • Powered by OpenAI & Streamlit</p>
         </div>
         """,
