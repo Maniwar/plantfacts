@@ -1,6 +1,8 @@
 """
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
+Author: Maniwar
+Version: 2.0.0 - Updated for Streamlit 2025
 """
 
 import streamlit as st
@@ -37,56 +39,60 @@ def init_services():
 
 plant_service, cache_service = init_services()
 
-# Apply custom CSS
+# Apply minimal custom CSS
 render_custom_css()
 
 # Render header
 render_header()
 
-# Input method selector
-st.markdown('<div class="input-selector">', unsafe_allow_html=True)
-input_method = st.radio(
-    "🎯 **Choose Your Input Method**",
-    config.INPUT_METHODS,
-    horizontal=True
-)
-st.markdown('</div>', unsafe_allow_html=True)
+# Input method selector with modern styling
+with st.container():
+    st.subheader("🎯 Choose Your Input Method")
+    input_method = st.radio(
+        "Select how you want to identify your plant:",
+        config.INPUT_METHODS,
+        horizontal=True,
+        label_visibility="collapsed"
+    )
 
 # Search Box Method
 if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
-    st.markdown("### 🔍 Search for Plants")
-    
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        plant_name = st_searchbox(
-            search_function=get_search_suggestions,
-            placeholder="e.g., Monstera Deliciosa, Rose, Cactus...",
-            label=None,
-            clear_on_submit=False,
-            clearable=True,
-            key="plant_search",
-        )
-    
-    with col2:
-        search_button = st.button("🔍 Search", use_container_width=True, type="primary")
-    
-    mute_audio = st.checkbox("🔇 Mute Audio", value=True)
+    with st.container(border=True):
+        st.subheader("🔍 Search for Plants")
+        
+        # Use columns for search layout
+        col1, col2 = st.columns([4, 1], gap="medium")
+        
+        with col1:
+            plant_name = st_searchbox(
+                search_function=get_search_suggestions,
+                placeholder="e.g., Monstera Deliciosa, Rose, Cactus...",
+                label=None,
+                clear_on_submit=False,
+                clearable=True,
+                key="plant_search",
+            )
+        
+        with col2:
+            # Search button with proper width
+            search_button = st.button("🔍 Search", type="primary", use_container_width=True)
+        
+        mute_audio = st.checkbox("🔇 Mute Audio", value=True)
     
     if search_button and plant_name:
         try:
             # Check if we have cached data
             if plant_service.get_cached_analysis(plant_name):
                 with st.spinner("✨ Loading from cache..."):
-                    st.markdown("### 📊 Analysis Results")
                     analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
                     st.info("💾 Loaded from cache - instant results!")
             else:
                 with st.spinner("🌿 Analyzing plant information..."):
-                    st.markdown("### 📊 Analysis Results")
                     analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
                     st.success("✅ Analysis complete and cached for future use!")
             
+            # Display the analysis
+            st.divider()
             render_plant_analysis_display(plant_name, analysis, mute_audio)
             
         except Exception as e:
@@ -94,19 +100,20 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
 
 # File Upload Method
 elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
-    st.markdown("### 📁 Upload Plant Image")
-    
-    uploaded_image = st.file_uploader(
-        "Drop an image or click to browse",
-        type=['jpg', 'jpeg', 'png'],
-        help="Supported formats: JPG, PNG"
-    )
+    with st.container(border=True):
+        st.subheader("📁 Upload Plant Image")
+        
+        uploaded_image = st.file_uploader(
+            "Drop an image or click to browse",
+            type=['jpg', 'jpeg', 'png'],
+            help="Supported formats: JPG, PNG"
+        )
     
     if uploaded_image:
-        col1, col2 = st.columns([1, 2])
+        col1, col2 = st.columns([1, 2], gap="medium")
         
         with col1:
-            st.image(uploaded_image, caption='Uploaded Image', use_column_width=True)
+            st.image(uploaded_image, caption='Uploaded Image', use_container_width=True)
         
         with col2:
             try:
@@ -126,23 +133,27 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                     with st.spinner("🌿 Fetching detailed information..."):
                         analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
                         st.success("✅ Analysis complete and cached for future use!")
-                
-                render_plant_analysis_display(plant_name, analysis)
-                
+            
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
+        
+        # Display analysis if successful
+        if 'analysis' in locals():
+            st.divider()
+            render_plant_analysis_display(plant_name, analysis)
 
 # Camera Capture Method
 elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
-    st.markdown("### 📸 Capture Plant Image")
-    
-    captured_image = st.camera_input("Take a photo of your plant")
+    with st.container(border=True):
+        st.subheader("📸 Capture Plant Image")
+        
+        captured_image = st.camera_input("Take a photo of your plant")
     
     if captured_image:
-        col1, col2 = st.columns([1, 2])
+        col1, col2 = st.columns([1, 2], gap="medium")
         
         with col1:
-            st.image(captured_image, caption='Captured Image', use_column_width=True)
+            st.image(captured_image, caption='Captured Image', use_container_width=True)
         
         with col2:
             try:
@@ -162,11 +173,14 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                     with st.spinner("🌿 Fetching detailed information..."):
                         analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
                         st.success("✅ Analysis complete and cached for future use!")
-                
-                render_plant_analysis_display(plant_name, analysis)
-                
+            
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
+        
+        # Display analysis if successful
+        if 'analysis' in locals():
+            st.divider()
+            render_plant_analysis_display(plant_name, analysis)
 
 # Footer
 render_legal_footer()
