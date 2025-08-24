@@ -2,7 +2,7 @@
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
 Author: Maniwar
-Version: 2.1.0 - Fixed streaming and caching issues
+Version: 2.2.0 - Removed sidebar, improved cache handling
 """
 
 import streamlit as st
@@ -66,37 +66,41 @@ render_custom_css()
 # Render header
 render_header()
 
-# Show cache status in sidebar
-with st.sidebar:
-    st.markdown("### 🔧 System Status")
+# Show cache status at the top (no sidebar)
+with st.expander("🔧 System Status", expanded=False):
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if cache_service.is_connected():
+            st.success("✅ Cache: Connected")
+        else:
+            st.warning("⚠️ Cache: Running without caching")
+            st.caption("Redis not configured - app works but responses won't be cached")
+    
+    with col2:
+        st.info(f"📊 Version: {config.APP_VERSION}")
+    
+    with col3:
+        st.info(f"👤 Author: {config.AUTHOR}")
+    
+    # Advanced cache debug (only if connected)
     if cache_service.is_connected():
-        st.success("✅ Cache: Connected")
-        
-        # Cache testing section
-        with st.expander("Cache Debug"):
-            test_plant = st.text_input("Check if plant is cached:", placeholder="e.g., Rose")
+        with st.container():
+            st.divider()
+            test_plant = st.text_input("🔍 Check if plant is cached:", placeholder="e.g., Rose", key="cache_check")
             if test_plant:
-                # Normalize for consistent checking
                 test_plant_normalized = test_plant.strip().title()
                 if plant_service.get_cached_analysis(test_plant_normalized):
-                    st.success(f"✅ '{test_plant_normalized}' is cached")
-                    # Add clear cache button for testing
-                    if st.button("Clear this cache entry", key="clear_cache"):
-                        cache_key = f"{config.CACHE_KEY_PREFIX}{test_plant_normalized}"
-                        if cache_service.delete(cache_key):
-                            st.info(f"Cleared cache for '{test_plant_normalized}'")
-                            st.rerun()
+                    st.success(f"✅ '{test_plant_normalized}' is in cache")
+                    col_a, col_b = st.columns([1, 3])
+                    with col_a:
+                        if st.button("🗑️ Clear this cache entry", key="clear_cache"):
+                            cache_key = f"{config.CACHE_KEY_PREFIX}{test_plant_normalized}"
+                            if cache_service.delete(cache_key):
+                                st.info(f"Cleared cache for '{test_plant_normalized}'")
+                                st.rerun()
                 else:
-                    st.info(f"❌ '{test_plant_normalized}' not in cache")
-    else:
-        st.warning("⚠️ Cache: Disabled")
-        st.caption("App works without caching")
-    
-    st.divider()
-    st.markdown("### 📊 App Info")
-    st.caption(f"Version: {config.APP_VERSION}")
-    st.caption(f"Author: {config.AUTHOR}")
-    st.caption("Cache TTL: No expiration")
+                    st.info(f"❌ '{test_plant_normalized}' not cached yet")
 
 # Input method selector with modern styling
 with st.container():
@@ -145,7 +149,8 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
             
             if cached_analysis:
                 # Display cached content instantly in formatted view
-                st.info("💾 Loading from cache - instant results!")
+                if cache_service.is_connected():
+                    st.info("💾 Loading from cache - instant results!")
                 analysis = cached_analysis
             else:
                 # Stream new content into a temporary container
@@ -166,7 +171,10 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
                 
                 # Clear the placeholder after streaming is complete
                 content_placeholder.empty()
-                st.success("✅ Analysis complete and cached for future use!")
+                if cache_service.is_connected():
+                    st.success("✅ Analysis complete and cached for future use!")
+                else:
+                    st.success("✅ Analysis complete!")
             
             # Display the formatted analysis (replaces the streamed content)
             st.divider()
@@ -174,6 +182,7 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
             
         except Exception as e:
             st.error(f"❌ Error analyzing plant: {str(e)}")
+            logging.error(f"Search error: {str(e)}")
 
 # File Upload Method
 elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
@@ -209,7 +218,8 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                 
                 if cached_analysis:
                     # Display cached content instantly
-                    st.info("💾 Loading from cache - instant results!")
+                    if cache_service.is_connected():
+                        st.info("💾 Loading from cache - instant results!")
                     analysis = cached_analysis
                 else:
                     # Stream new content
@@ -226,10 +236,14 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                                 st.markdown(analysis)
                     
                     content_placeholder.empty()
-                    st.success("✅ Analysis complete and cached for future use!")
+                    if cache_service.is_connected():
+                        st.success("✅ Analysis complete and cached for future use!")
+                    else:
+                        st.success("✅ Analysis complete!")
             
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
+                logging.error(f"Image processing error: {str(e)}")
         
         # Display formatted analysis if successful
         if 'analysis' in locals():
@@ -266,7 +280,8 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                 
                 if cached_analysis:
                     # Display cached content instantly
-                    st.info("💾 Loading from cache - instant results!")
+                    if cache_service.is_connected():
+                        st.info("💾 Loading from cache - instant results!")
                     analysis = cached_analysis
                 else:
                     # Stream new content
@@ -283,10 +298,14 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                                 st.markdown(analysis)
                     
                     content_placeholder.empty()
-                    st.success("✅ Analysis complete and cached for future use!")
+                    if cache_service.is_connected():
+                        st.success("✅ Analysis complete and cached for future use!")
+                    else:
+                        st.success("✅ Analysis complete!")
             
             except Exception as e:
                 st.error(f"❌ Error processing image: {str(e)}")
+                logging.error(f"Camera capture error: {str(e)}")
         
         # Display formatted analysis if successful
         if 'analysis' in locals():
