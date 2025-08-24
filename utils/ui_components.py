@@ -1,8 +1,8 @@
 """
 UI Components Module
-Render LLM output verbatim + animations (leaf, sheen, typewriter), reliable images
+Verbatim LLM rendering + animations (leaf, sheen, typewriter), reliable images
 Author: Maniwar
-Version: 5.0.0
+Version: 5.1.0
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from gtts import gTTS
 
 
 # =========================================================
-# Global CSS (our UI chrome only)
+# Global CSS (only our own HTML is passed here)
 # =========================================================
 def load_custom_css() -> None:
     st.html(
@@ -79,7 +79,7 @@ def load_custom_css() -> None:
             .sheen, .leaf, .typewriter { animation: none !important; border-right:none; }
           }
 
-          /* Minor list spacing from model text */
+          /* Tidy default spacing from model text */
           .stMarkdown ul { margin:.3rem 0 .6rem 1rem; }
           .stMarkdown p:empty { display:none!important; }
         </style>
@@ -113,7 +113,7 @@ def render_header(
 
 
 # =========================================================
-# Optional particle background (JS in iframe so it won't interfere)
+# Optional particle background (JS in iframe)
 # =========================================================
 def render_particles(enabled: bool = False) -> None:
     if not enabled:
@@ -232,7 +232,7 @@ def get_plant_image_url(plant_name: str) -> str:  # backward compatibility
 
 
 # =========================================================
-# Quick facts (very lightweight heuristics)
+# Quick facts (lightweight heuristics)
 # =========================================================
 def extract_quick_facts(analysis: str) -> Dict[str, str]:
     facts: Dict[str, str] = {}
@@ -266,7 +266,7 @@ def extract_quick_facts(analysis: str) -> Dict[str, str]:
 
 
 # =========================================================
-# Main renderer (verbatim LLM output on the right)
+# Main renderer — VERBATIM right pane
 # =========================================================
 def render_plant_analysis_display(
     plant_name: str,
@@ -275,11 +275,11 @@ def render_plant_analysis_display(
     particles: bool = False,
     floating_leaf: bool = True,
     typewriter_subtitle: bool = True,
-    allow_model_html: bool = False,   # flip to True if you trust model HTML
+    allow_model_html: bool = False,   # set True if you trust model HTML
 ) -> None:
     """
     Left: image + quick facts (+ optional audio).
-    Right: show LLM output exactly as provided (Markdown; optionally HTML).
+    Right: show LLM output exactly as provided.
     """
     render_particles(enabled=particles)
     render_header(show_leaf=floating_leaf, typewriter=typewriter_subtitle)
@@ -301,11 +301,9 @@ def render_plant_analysis_display(
         facts = extract_quick_facts(analysis)
         if facts:
             cols = st.columns(2)
-            i = 0
-            for label, value in facts.items():
+            for i, (label, value) in enumerate(facts.items()):
                 with cols[i % 2]:
                     st.metric(label=label, value=value)
-                i += 1
 
         if not mute_audio:
             st.markdown("#### 🔊 Audio Guide")
@@ -321,11 +319,9 @@ def render_plant_analysis_display(
     with right:
         st.markdown("#### 📋 Detailed Information")
         if allow_model_html:
-            # Render model output as-is, including HTML
-            st.markdown(analysis, unsafe_allow_html=True)
+            st.markdown(analysis, unsafe_allow_html=True)  # raw HTML allowed
         else:
-            # Safer: render as Markdown only
-            st.markdown(analysis)
+            st.markdown(analysis)  # Markdown only (safer)
 
 
 # =========================================================
@@ -334,26 +330,13 @@ def render_plant_analysis_display(
 def render_custom_css() -> None:
     load_custom_css()
 
-render_custom_css()
-
-render_plant_analysis_display(
-    plant_name=query,
-    analysis=analysis_text_from_llm,
-    mute_audio=st.session_state.get("mute_audio", True),
-    particles=True,                 # optional
-    floating_leaf=True,             # keep the leaf
-    typewriter_subtitle=True,       # keep the typewriter effect
-    allow_model_html=False          # set True if your model emits safe HTML you want rendered
-)
-
-render_legal_footer()
 
 def render_legal_footer() -> None:
     st.html(
         """
         <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
              background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
-          <div>🌿 Plant Facts Explorer • Version 5.0.0</div>
+          <div>🌿 Plant Facts Explorer • Version 5.1.0</div>
           <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
         </div>
         """
