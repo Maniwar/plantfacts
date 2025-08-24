@@ -108,7 +108,7 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
         with col1:
             st.image(uploaded_image, caption='Uploaded Image', use_column_width=True)
         
-                with col2:
+        with col2:
             try:
                 with st.spinner("🤖 Identifying plant..."):
                     image_bytes = uploaded_image.read()
