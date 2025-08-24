@@ -18,7 +18,7 @@ class AppConfig:
     
     # OpenAI Settings
     OPENAI_MODEL = "gpt-4o-mini"
-    MAX_TOKENS = 4096
+    MAX_TOKENS = 16000
     
     # Redis Cache Settings
     CACHE_KEY_PREFIX = "plant:"
