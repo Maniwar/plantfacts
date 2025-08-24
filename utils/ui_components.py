@@ -292,17 +292,18 @@ def _normalize_infix_headings(text: str) -> str:
     """
     t = text.replace("\r\n", "\n")
 
-    # Newline before '##' / '###' if not already at line start
-    t = re.sub(r"(?<!\n)(\s+##\s+)", r"\n\2", t)
-    t = re.sub(r"(?<!\n)(\s+###\s+)", r"\n\2", t)
+    # Newline before '##' / '###' tokens when not already at start of a line
+    t = re.sub(r"(?<!\n)\s+(##\s+)", r"\n\1", t)
+    t = re.sub(r"(?<!\n)\s+(###\s+)", r"\n\1", t)
 
     # Newline before patterns like ' 1. Title' or ' 2) Title'
     t = re.sub(r"(?<!\n)\s+(\d+\s*[\.\)]\s+)", r"\n\1", t)
 
     # Newline before emoji+bold headings like ' 📌 **Common Name**'
-    t = re.sub(r"(?<!\n)\s+([📌📝🌱⚠️🌿🐛💡]\s*\*\*)", r"\n\1", t)
+    t = re.sub(r"(?<!\n)\s*([📌📝🌱⚠️🌿🐛💡]\s*\*\*)", r"\n\1", t)
 
     return t
+
 
 
 def _split_sections(text: str) -> List[Tuple[str, str, str]]:
