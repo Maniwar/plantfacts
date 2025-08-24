@@ -444,93 +444,54 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
             # Detailed analysis - EXPANDED BY DEFAULT for better UX
             st.markdown("### 📋 Detailed Information")
             
-            # Parse and display sections properly
+            # Parse and display sections - ALL EXPANDED for better UX
             sections = analysis.split('\n\n')
             
-            # Track which sections we've already displayed
-            displayed_sections = set()
-            
             for section in sections:
-                if section.strip() and len(section.strip()) > 20:
+                if section.strip():
                     section_lower = section.lower()
                     
-                    # Check for General Information
-                    if any(x in section_lower for x in ["general information", "**1."]) and "general" not in displayed_sections:
-                        displayed_sections.add("general")
-                        # Just show the content without the redundant header
+                    # Format each section type - ALL EXPANDED=TRUE
+                    if any(x in section_lower for x in ["general information", "**1."]):
                         with st.expander("📝 General Information", expanded=True):
-                            # Remove ALL headers and numbers from content
-                            content = re.sub(r'\*\*(?:\d+\.?\s*)?(?:General Information:?)\*\*:?\s*', '', section)
-                            content = re.sub(r'^#+\s*General Information\s*', '', content, flags=re.MULTILINE)
-                            st.markdown(content.strip())
+                            content = re.sub(r'\*\*(?:1\.|General Information:?)\*\*:?\s*', '', section)
+                            st.markdown(content)
                     
-                    # Check for Care Instructions
-                    elif any(x in section_lower for x in ["care instructions", "**2."]) and "care" not in displayed_sections:
-                        displayed_sections.add("care")
+                    elif any(x in section_lower for x in ["care instructions", "**2."]):
                         with st.expander("🌱 Care Instructions", expanded=True):
-                            content = re.sub(r'\*\*(?:\d+\.?\s*)?(?:Care Instructions:?)\*\*:?\s*', '', section)
-                            content = re.sub(r'^#+\s*Care Instructions\s*', '', content, flags=re.MULTILINE)
-                            st.markdown(content.strip())
+                            content = re.sub(r'\*\*(?:2\.|Care Instructions:?)\*\*:?\s*', '', section)
+                            st.markdown(content)
                     
-                    # Check for Toxicity/Safety
-                    elif any(x in section_lower for x in ["toxicity", "**3."]) and "toxicity" not in displayed_sections:
-                        displayed_sections.add("toxicity")
+                    elif any(x in section_lower for x in ["toxicity", "**3."]):
                         is_toxic = "toxic" in section_lower and "not toxic" not in section_lower
                         with st.expander("⚠️ Safety Information", expanded=True):
-                            content = re.sub(r'\*\*(?:\d+\.?\s*)?(?:Toxicity:?)\*\*:?\s*', '', section)
-                            content = re.sub(r'^#+\s*Toxicity\s*', '', content, flags=re.MULTILINE)
+                            content = re.sub(r'\*\*(?:3\.|Toxicity:?)\*\*:?\s*', '', section)
                             if is_toxic:
-                                st.warning(content.strip())
+                                st.warning(content)
                             else:
-                                st.success(content.strip())
+                                st.success(content)
                     
-                    # Check for Propagation
-                    elif any(x in section_lower for x in ["propagation", "**4."]) and "propagation" not in displayed_sections:
-                        displayed_sections.add("propagation")
+                    elif any(x in section_lower for x in ["propagation", "**4."]):
                         with st.expander("🌿 Propagation Methods", expanded=True):
-                            content = re.sub(r'\*\*(?:\d+\.?\s*)?(?:Propagation:?)\*\*:?\s*', '', section)
-                            content = re.sub(r'^#+\s*Propagation\s*', '', content, flags=re.MULTILINE)
-                            st.markdown(content.strip())
+                            content = re.sub(r'\*\*(?:4\.|Propagation:?)\*\*:?\s*', '', section)
+                            st.markdown(content)
                     
-                    # Check for Common Issues
-                    elif any(x in section_lower for x in ["common issues", "problems", "**5."]) and "issues" not in displayed_sections:
-                        displayed_sections.add("issues")
+                    elif any(x in section_lower for x in ["common issues", "problems", "**5."]):
+                        # This one can stay collapsed as it's less critical
                         with st.expander("🐛 Common Issues & Solutions", expanded=False):
-                            content = re.sub(r'\*\*(?:\d+\.?\s*)?(?:Common Issues:?)\*\*:?\s*', '', section)
-                            content = re.sub(r'^#+\s*Common Issues\s*', '', content, flags=re.MULTILINE)
-                            st.markdown(content.strip())
+                            content = re.sub(r'\*\*(?:5\.|Common Issues:?)\*\*:?\s*', '', section)
+                            st.markdown(content)
                     
-                    # Check for Interesting Facts
-                    elif any(x in section_lower for x in ["interesting facts", "**6."]) and "facts" not in displayed_sections:
-                        displayed_sections.add("facts")
+                    elif any(x in section_lower for x in ["interesting facts", "**6."]):
                         with st.expander("💡 Interesting Facts", expanded=True):
-                            content = re.sub(r'\*\*(?:\d+\.?\s*)?(?:Interesting Facts:?)\*\*:?\s*', '', section)
-                            content = re.sub(r'^#+\s*Interesting Facts\s*', '', content, flags=re.MULTILINE)
-                            st.info(content.strip())
+                            content = re.sub(r'\*\*(?:6\.|Interesting Facts:?)\*\*:?\s*', '', section)
+                            st.info(content)
                     
-                    # For subsections within main sections, extract headers and create appropriate expanders
                     else:
-                        # Try to extract a meaningful header from the section
-                        header_match = re.match(r'^(?:\*\*)?([A-Z][^:*\n]+)(?:\*\*)?[:.]?\s*', section)
-                        if header_match:
-                            header = header_match.group(1).strip()
-                            content = section[header_match.end():].strip()
-                            
-                            # Choose appropriate icon based on content
-                            icon = "📌"
-                            if any(word in header.lower() for word in ["origin", "habitat", "native"]):
-                                icon = "🌍"
-                            elif any(word in header.lower() for word in ["description", "appearance", "physical"]):
-                                icon = "👁️"
-                            elif any(word in header.lower() for word in ["scientific", "name", "species"]):
-                                icon = "🔬"
-                            elif any(word in header.lower() for word in ["common name"]):
-                                icon = "📛"
-                            
-                            # Only create expander if we have substantial content
-                            if content and len(content) > 20:
-                                with st.expander(f"{icon} {header}", expanded=True):
-                                    st.markdown(content)
+                        # Other sections - expanded if substantial
+                        if section.strip() and len(section.strip()) > 20:
+                            with st.expander("📌 Additional Information", expanded=True):
+                                st.markdown(section)
 
 def render_custom_css():
     """Apply beautiful custom CSS styles with dark theme support"""
@@ -561,7 +522,7 @@ def render_legal_footer():
     st.markdown("""
     <div class="footer-container">
         <h3>🌿 Plant Facts Explorer</h3>
-        <p>Made with ❤️ by Maniwar • Version 2.5.1</p>
+        <p>Made with ❤️ by Maniwar • Version 2.5.0</p>
         <p style="opacity: 0.8; font-size: 0.9rem;">© 2024 • Powered by OpenAI & Streamlit</p>
     </div>
     """, unsafe_allow_html=True)
