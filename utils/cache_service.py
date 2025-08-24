@@ -48,10 +48,16 @@ class CacheService:
             Cached value or None if not found or cache disabled
         """
         if not self.connected:
+            logger.warning("Redis not connected - cache disabled")
             return None
             
         try:
-            return self.redis_client.get(key)
+            value = self.redis_client.get(key)
+            if value:
+                logger.info(f"Cache HIT for key: {key}")
+            else:
+                logger.info(f"Cache MISS for key: {key}")
+            return value
         except Exception as e:
             logger.error(f"Error getting cache key {key}: {e}")
             return None
@@ -63,19 +69,22 @@ class CacheService:
         Args:
             key: Cache key
             value: Value to cache
-            expire: Optional expiration time in seconds
+            expire: Optional expiration time in seconds (None = no expiration)
             
         Returns:
             True if successful, False otherwise
         """
         if not self.connected:
+            logger.warning("Redis not connected - cannot cache")
             return False
             
         try:
             if expire:
                 self.redis_client.setex(key, expire, value)
+                logger.info(f"Cache SET for key: {key} (size: {len(value)} chars, TTL: {expire}s)")
             else:
                 self.redis_client.set(key, value)
+                logger.info(f"Cache SET for key: {key} (size: {len(value)} chars, no expiration)")
             return True
         except Exception as e:
             logger.error(f"Error setting cache key {key}: {e}")
