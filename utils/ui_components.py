@@ -354,6 +354,6 @@ def render_legal_footer():
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 border-radius: 15px; color: white;">
         <p style="margin: 0;">Made with ❤️ for Plant Enthusiasts</p>
-        <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">© 2024 Plant Facts Explorer</p>
+        <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">© 2025-  Maniwar</p>
     </div>
     """, unsafe_allow_html=True)
