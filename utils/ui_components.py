@@ -115,41 +115,70 @@ def render_header(
 # =========================================================
 # Optional particle background (JS in iframe)
 # =========================================================
-def render_particles(enabled: bool = False) -> None:
+def render_particles(enabled: bool = False, plant_name: str = "") -> None:
     if not enabled:
         return
+
+    # Use plant name as a seed so pattern is unique but stable
+    safe_seed = abs(hash(plant_name)) % (10**6) if plant_name else 42
+
     components.html(
-        """
+        f"""
         <!doctype html><html><head><meta charset="utf-8"/>
         <style>
-          html,body,#tsparticles { margin:0; padding:0; height:100%; width:100%; background:transparent; }
+          html,body,#tsparticles {{
+            margin:0; padding:0; height:100%; width:100%; background:transparent;
+          }}
         </style></head><body>
           <div id="tsparticles"></div>
           <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
           <script>
-            (async () => {
+            (async () => {{
               const engine = window.tsParticles;
-              await engine.load("tsparticles", {
-                background: { color: { value: "transparent" } },
+              await engine.load("tsparticles", {{
+                fullScreen: {{ enable: true, zIndex: 0 }},
+                background: {{ color: {{ value: "transparent" }} }},
                 fpsLimit: 45,
-                particles: {
-                  number: { value: 34, density: { enable: true, area: 800 } },
-                  color: { value: ["#a7f3d0", "#93c5fd", "#c4b5fd"] },
-                  opacity: { value: 0.25 },
-                  size: { value: { min: 1, max: 3 } },
-                  move: { enable: true, speed: 0.8, direction: "none", outModes: { default: "out" } },
-                  links: { enable: true, distance: 120, opacity: 0.12, color: "#cbd5e1" },
-                },
+                particles: {{
+                  number: {{ value: 34, density: {{ enable: true, area: 800 }} }},
+                  color: {{ value: ["#a7f3d0", "#93c5fd", "#c4b5fd"] }},
+                  opacity: {{ value: 0.25 }},
+                  size: {{ value: {{ min: 1, max: 3 }} }},
+                  move: {{ enable: true, speed: 0.8, outModes: {{ default: "out" }} }},
+                  links: {{ enable: true, distance: 120, opacity: 0.12, color: "#cbd5e1" }},
+                }},
                 detectRetina: true,
-                fullScreen: { enable: true, zIndex: 0 }
-              });
-            })();
+                emitters: [{{
+                  position: {{ x: 50, y: 50 }},
+                  rate: {{ delay: 5, quantity: 1 }},
+                  particles: {{
+                    move: {{ speed: 0.4, outModes: {{ default: "out" }} }},
+                    shape: {{
+                      type: "char",
+                      options: {{
+                        char: {{
+                          value: "{plant_name or '🌱'}",
+                          font: "Space Grotesk",
+                          style: "",
+                          weight: 600
+                        }}
+                      }}
+                    }},
+                    size: {{ value: 20 }},
+                    color: {{ value: "#ffffff" }},
+                    opacity: {{ value: 0.2 }},
+                  }}
+                }}],
+                preset: "links",
+              }});
+            }})();
           </script>
         </body></html>
         """,
         height=220,
         scrolling=False,
     )
+
 
 
 # =========================================================
