@@ -20,12 +20,55 @@ def load_custom_css():
     """
     css = """
     <style>
-        /* Import Google Fonts */
+        /* Import Google Fonts and FontAwesome */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
         
         /* Global App Styling */
         .stApp {
             font-family: 'Inter', sans-serif;
+        }
+        
+        /* Header with floating leaf animation */
+        .header-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            color: white;
+        }
+        
+        .header-icon {
+            font-size: 60px;
+            margin-right: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .header-text h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white !important;
+            background: none !important;
+            -webkit-text-fill-color: white !important;
+        }
+        
+        .header-text p {
+            margin: 0.5rem 0 0 0;
+            font-size: 1.1rem;
+            opacity: 0.95;
+            color: white;
         }
         
         /* Style containers with borders */
@@ -122,15 +165,6 @@ def load_custom_css():
             background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
         }
         
-        /* Header title gradient */
-        h1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-        }
-        
         /* Radio button styling */
         .stRadio > div {
             display: flex;
@@ -150,22 +184,42 @@ def load_custom_css():
             border: none;
             border-top: 2px solid #e2e8f0;
         }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .header-text h1 {
+                font-size: 1.8rem;
+            }
+            .header-icon {
+                font-size: 40px;
+            }
+            .header-container {
+                padding: 1.5rem;
+            }
+        }
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
 
 def render_header():
     """
-    Render the application header using Streamlit 2025 flex containers
+    Render the application header with floating leaf animation
     """
-    # Create a horizontal flex container for the header
-    header = st.container(horizontal=True, horizontal_alignment="center")
-    
-    with header:
-        # Icon and title in horizontal layout
-        st.markdown("# 🌿 Plant Facts Explorer")
-    
-    st.markdown("*Discover detailed information about any plant with AI-powered insights*")
+    # Create header with gradient background and floating leaf
+    header_html = """
+    <div class="header-container">
+        <div class="header-content">
+            <div class="header-icon">
+                <i class="fas fa-leaf"></i>
+            </div>
+            <div class="header-text">
+                <h1>Plant Facts Explorer</h1>
+                <p>Discover detailed information about any plant with AI-powered insights</p>
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
     st.divider()
 
 def get_plant_image(plant_name: str) -> str:
