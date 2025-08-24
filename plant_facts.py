@@ -46,6 +46,11 @@ def init_services():
 
 plant_service, cache_service = init_services()
 
+# Check if services are ready
+if not plant_service.is_ready():
+    st.error("⚠️ OpenAI API not configured. Please add OPENAI_API_KEY to your secrets.")
+    st.stop()
+
 # Apply minimal custom CSS
 render_custom_css()
 
