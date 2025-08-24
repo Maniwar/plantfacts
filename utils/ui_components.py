@@ -453,18 +453,18 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                     
                     # Format each section type - ALL EXPANDED=TRUE
                     if any(x in section_lower for x in ["general information", "**1."]):
-                        with st.expander("📝 General Information", expanded=True):
+                        with st.expander("📝", expanded=True):
                             content = re.sub(r'\*\*(?:1\.|General Information:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
                     elif any(x in section_lower for x in ["care instructions", "**2."]):
-                        with st.expander("🌱 Care Instructions", expanded=True):
+                        with st.expander("🌱", expanded=True):
                             content = re.sub(r'\*\*(?:2\.|Care Instructions:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
                     elif any(x in section_lower for x in ["toxicity", "**3."]):
                         is_toxic = "toxic" in section_lower and "not toxic" not in section_lower
-                        with st.expander("⚠️ Safety Information", expanded=True):
+                        with st.expander("⚠️", expanded=True):
                             content = re.sub(r'\*\*(?:3\.|Toxicity:?)\*\*:?\s*', '', section)
                             if is_toxic:
                                 st.warning(content)
@@ -472,13 +472,13 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                                 st.success(content)
                     
                     elif any(x in section_lower for x in ["propagation", "**4."]):
-                        with st.expander("🌿 Propagation Methods", expanded=True):
+                        with st.expander("🌿", expanded=True):
                             content = re.sub(r'\*\*(?:4\.|Propagation:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
                     elif any(x in section_lower for x in ["common issues", "problems", "**5."]):
                         # This one can stay collapsed as it's less critical
-                        with st.expander("🐛 Common Issues & Solutions", expanded=False):
+                        with st.expander("🐛", expanded=False):
                             content = re.sub(r'\*\*(?:5\.|Common Issues:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
@@ -490,7 +490,7 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                     else:
                         # Other sections - expanded if substantial
                         if section.strip() and len(section.strip()) > 20:
-                            with st.expander("📌 Additional Information", expanded=True):
+                            with st.expander("📌", expanded=True):
                                 st.markdown(section)
 
 def render_custom_css():
