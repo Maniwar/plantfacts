@@ -41,7 +41,7 @@ class PlantService:
         cached_result = self.cache.get(cache_key)
         
         if cached_result:
-            # Return cached result immediately - no delay!
+            # Return cached result immediately - NO STREAMING!
             yield cached_result
         else:
             # Generate new analysis with streaming
