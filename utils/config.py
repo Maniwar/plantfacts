@@ -18,11 +18,11 @@ class AppConfig:
     
     # OpenAI Settings
     OPENAI_MODEL = "gpt-4o-mini"
-    MAX_TOKENS = 16000
+    MAX_TOKENS = 4096
     
     # Redis Cache Settings
     CACHE_KEY_PREFIX = "plant:"
-    CACHE_TTL = None  # Set to seconds (e.g., 86400 for 24 hours) to expire cache, None for no expiration
+    CACHE_TTL = None  # No expiration - cache forever
     
     # UI Settings
     IMAGE_WIDTH = 800
