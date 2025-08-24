@@ -8,6 +8,20 @@ Version: 2.0.0 - Updated for Streamlit 2025
 import streamlit as st
 import base64
 import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Clear any stale cache
+if 'initialized' not in st.session_state:
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    st.session_state.initialized = True
+
+# Import modules after clearing cache
 from utils.config import AppConfig
 from utils.ui_components import (
     render_header,
@@ -20,12 +34,6 @@ from utils.search_service import get_search_suggestions
 from utils.cache_service import CacheService
 from streamlit_searchbox import st_searchbox
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
 # Initialize configuration
 config = AppConfig()
 
@@ -36,15 +44,23 @@ st.set_page_config(
     page_icon=config.PAGE_ICON
 )
 
-# Initialize services
-@st.cache_resource
+# Initialize services without caching to avoid stale instances
 def init_services():
-    """Initialize and cache service instances"""
+    """Initialize service instances"""
     cache_service = CacheService()
     plant_service = PlantService(cache_service)
     return plant_service, cache_service
 
 plant_service, cache_service = init_services()
+
+# Verify service methods exist (for debugging)
+if st.secrets.get("DEBUG", False):
+    required_methods = ['is_ready', 'get_cached_analysis', 'get_analysis_stream', 'identify_plant_from_image']
+    for method in required_methods:
+        if not hasattr(plant_service, method):
+            st.error(f"Missing method: {method}")
+        else:
+            st.success(f"✓ Method exists: {method}")
 
 # Check if services are ready
 if not plant_service.is_ready():
@@ -142,8 +158,10 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
             # Normalize plant name for consistent caching
             plant_name = plant_name.strip().title()
             
-            # Check cache first
-            cached_analysis = plant_service.get_cached_analysis(plant_name)
+            # Check cache first (with fallback for missing method)
+            cached_analysis = None
+            if hasattr(plant_service, 'get_cached_analysis'):
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
             
             if cached_analysis:
                 # Display cached content instantly
@@ -155,7 +173,11 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
             else:
                 # Stream new content
                 with st.spinner("🌿 Analyzing plant information..."):
-                    analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
+                    if hasattr(plant_service, 'get_analysis_stream'):
+                        analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
+                    else:
+                        st.error("PlantService missing required methods. Please refresh the page.")
+                        st.stop()
                 st.success("✅ Analysis complete and cached for future use!")
             
             # Display the analysis
@@ -191,8 +213,13 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                     plant_name = plant_service.identify_plant_from_image(image_b64)
                     st.success(f"✅ Identified: **{plant_name}**")
                 
-                # Check cache status
-                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                # Check cache status (with method check)
+                cached_analysis = None
+                try:
+                    cached_analysis = plant_service.get_cached_analysis(plant_name)
+                except AttributeError:
+                    st.warning("Cache methods not available. Please refresh the page.")
+                    cached_analysis = None
                 
                 if cached_analysis:
                     # Display cached content instantly
@@ -237,8 +264,13 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                     plant_name = plant_service.identify_plant_from_image(image_b64)
                     st.success(f"✅ Identified: **{plant_name}**")
                 
-                # Check cache status
-                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                # Check cache status (with method check)
+                cached_analysis = None
+                try:
+                    cached_analysis = plant_service.get_cached_analysis(plant_name)
+                except AttributeError:
+                    st.warning("Cache methods not available. Please refresh the page.")
+                    cached_analysis = None
                 
                 if cached_analysis:
                     # Display cached content instantly
