@@ -2,7 +2,7 @@
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
 Author: Maniwar
-Version: 2.3.0 - Beautiful UI redesign
+Version: 2.4.0 - Dark theme support and image fallback
 """
 
 import streamlit as st
