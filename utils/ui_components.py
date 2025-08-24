@@ -2,7 +2,7 @@
 UI Components Module
 Verbatim LLM rendering + animations (leaf, sheen, typewriter), reliable images
 Author: Maniwar
-Version: 8.0.0 - Simplified particles, mobile-optimized search
+Version: 8.1.0 - Enhanced search support
 """
 
 from __future__ import annotations
@@ -714,7 +714,7 @@ def render_legal_footer() -> None:
         """
         <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
              background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
-          <div>🌿 Plant Facts Explorer • Version 8.0.0</div>
+          <div>🌿 Plant Facts Explorer • Version 8.1.0</div>
           <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
         </div>
         """

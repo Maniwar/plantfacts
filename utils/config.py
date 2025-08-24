@@ -10,7 +10,7 @@ class AppConfig:
     # App Settings
     PAGE_TITLE = "Plant Facts Explorer"
     PAGE_ICON = "🌿"
-    APP_VERSION = "5.0.0"  # Updated: Mobile-friendly search, removed complex particles
+    APP_VERSION = "5.1.0"  # Updated: Enhanced search with Enter key support and auto-search
     AUTHOR = "Maniwar"
     
     # Input Methods

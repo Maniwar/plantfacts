@@ -2,7 +2,7 @@
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
 Author: Maniwar
-Version: 5.0.0 - Mobile-friendly search, cleaner particles
+Version: 5.1.0 - Enhanced search with Enter key support and auto-search on selection
 """
 
 import streamlit as st
@@ -116,85 +116,137 @@ with st.container():
         label_visibility="collapsed"
     )
 
-# Search Box Method - Simplified for mobile compatibility
+# Search Box Method - Unified solution with Enter key support
 if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
     with st.container(border=True):
         st.subheader("🔍 Search for Plants")
         
-        # Single search interface that works on all devices
+        # Initialize session state
+        if 'do_search' not in st.session_state:
+            st.session_state.do_search = False
+        if 'search_query' not in st.session_state:
+            st.session_state.search_query = ""
+        
+        # Main search interface
         col1, col2 = st.columns([4, 1], gap="medium")
         
         with col1:
-            # Searchbox with dropdown suggestions
+            # Define callback for searchbox selection
+            def handle_selection(selected_value):
+                """Automatically trigger search when item is selected from dropdown"""
+                if selected_value:
+                    st.session_state.search_query = selected_value
+                    st.session_state.do_search = True
+            
+            # Searchbox with automatic search on selection
             plant_name = st_searchbox(
                 search_function=get_search_suggestions,
                 placeholder="Type plant name...",
                 label=None,
                 clear_on_submit=False,
                 clearable=True,
-                key="plant_search",
+                key="plant_searchbox",
+                submit_function=handle_selection  # Auto-search on selection
             )
         
         with col2:
-            # Search button - primary action for mobile users
-            search_button = st.button("🔍 Search", type="primary", use_container_width=True)
+            # Search button for typed text (without selection)
+            if st.button("🔍 Search", type="primary", use_container_width=True):
+                if plant_name:
+                    st.session_state.search_query = plant_name
+                    st.session_state.do_search = True
         
-        # Quick search buttons for common plants (great for mobile)
-        st.caption("🌿 Popular searches:")
-        quick_cols = st.columns(5)
-        quick_plants = ["Rose", "Monstera", "Cactus", "Orchid", "Fern"]
-        for idx, plant in enumerate(quick_plants):
-            with quick_cols[idx]:
-                if st.button(plant, key=f"quick_{plant}", use_container_width=True):
-                    plant_name = plant
-                    search_button = True
+        # For mobile/Enter key support: Simple text input as fallback
+        with st.container():
+            st.caption("💡 Can't find what you're looking for? Type below and press Enter:")
+            
+            # Form captures Enter key
+            with st.form(key="text_search_form", clear_on_submit=False):
+                cols = st.columns([5, 1])
+                with cols[0]:
+                    text_input = st.text_input(
+                        "Direct input",
+                        placeholder="Type any plant name and press Enter...",
+                        label_visibility="collapsed",
+                        value=plant_name if plant_name else ""  # Mirror searchbox value
+                    )
+                with cols[1]:
+                    if st.form_submit_button("Go →", use_container_width=True):
+                        if text_input:
+                            st.session_state.search_query = text_input
+                            st.session_state.do_search = True
         
+        # Quick search buttons for popular plants
+        st.divider()
+        st.caption("🌿 **Popular plants** - tap to search instantly:")
+        
+        # Two rows of quick buttons
+        row1_cols = st.columns(5)
+        popular_plants_row1 = ["Rose", "Monstera", "Snake Plant", "Orchid", "Fern"]
+        for idx, plant in enumerate(popular_plants_row1):
+            with row1_cols[idx]:
+                if st.button(plant, key=f"pop_{plant}", use_container_width=True):
+                    st.session_state.search_query = plant
+                    st.session_state.do_search = True
+        
+        row2_cols = st.columns(5)
+        popular_plants_row2 = ["Cactus", "Aloe Vera", "Pothos", "Peace Lily", "Bamboo"]
+        for idx, plant in enumerate(popular_plants_row2):
+            with row2_cols[idx]:
+                if st.button(plant, key=f"pop2_{plant}", use_container_width=True, type="secondary"):
+                    st.session_state.search_query = plant
+                    st.session_state.do_search = True
+        
+        st.divider()
         mute_audio = st.checkbox("🔇 Mute Audio", value=True)
     
-    # Process search when button clicked or selection made
-    if search_button and plant_name:
+    # Execute search when triggered
+    if st.session_state.do_search and st.session_state.search_query:
+        # Reset the trigger
+        st.session_state.do_search = False
+        search_term = st.session_state.search_query
+        
         try:
             # Normalize plant name for consistent caching
-            plant_name = plant_name.strip().title()
+            plant_name = search_term.strip().title()
             
-            # Create a placeholder for the content
-            content_placeholder = st.empty()
-            
-            # Check cache first
-            cached_analysis = plant_service.get_cached_analysis(plant_name)
-            
-            if cached_analysis:
-                # Display cached content instantly in formatted view
-                if cache_service.is_connected():
-                    st.info("💾 Loading from cache - instant results!")
-                analysis = cached_analysis
+            if not plant_name:
+                st.warning("Please enter a plant name to search.")
             else:
-                # Stream new content into a temporary container
-                st.info("🌿 Generating new analysis...")
+                # Create a placeholder for the content
+                content_placeholder = st.empty()
                 
-                # Use a container for streaming that will be replaced
-                with content_placeholder.container():
-                    st.markdown("### 🔍 Live Analysis Stream")
-                    analysis = ""
-                    stream_container = st.empty()
-                    
-                    # Stream the content and accumulate it
-                    for chunk in plant_service.get_analysis_stream(plant_name):
-                        analysis += chunk
-                        # Update the streaming display with animation
-                        render_streaming_content(analysis, stream_container)
+                # Check cache first
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
                 
-                # Clear the placeholder after streaming is complete
-                content_placeholder.empty()
-                if cache_service.is_connected():
-                    st.success("✅ Analysis complete and cached for future use!")
+                if cached_analysis:
+                    # Display cached content instantly
+                    if cache_service.is_connected():
+                        st.info("💾 Loading from cache - instant results!")
+                    analysis = cached_analysis
                 else:
-                    st.success("✅ Analysis complete!")
-            
-            # Display the formatted analysis
-            st.divider()
-            render_plant_analysis_display(plant_name, analysis, mute_audio, particles=ENABLE_PARTICLES)
-            
+                    # Stream new content
+                    st.info("🌿 Generating new analysis...")
+                    
+                    with content_placeholder.container():
+                        st.markdown("### 🔍 Live Analysis Stream")
+                        analysis = ""
+                        stream_container = st.empty()
+                        
+                        for chunk in plant_service.get_analysis_stream(plant_name):
+                            analysis += chunk
+                            render_streaming_content(analysis, stream_container)
+                    
+                    content_placeholder.empty()
+                    if cache_service.is_connected():
+                        st.success("✅ Analysis complete and cached for future use!")
+                    else:
+                        st.success("✅ Analysis complete!")
+                
+                # Display the formatted analysis
+                st.divider()
+                render_plant_analysis_display(plant_name, analysis, mute_audio, particles=ENABLE_PARTICLES)
+                
         except Exception as e:
             st.error(f"❌ Error analyzing plant: {str(e)}")
             logging.error(f"Search error: {str(e)}")
