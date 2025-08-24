@@ -360,65 +360,100 @@ def _strip_global_title(text: str) -> str:
 def _extract_blocks(body: str) -> Tuple[List[Tuple[str, str]], List[str], List[str]]:
     """
     From a section body, extract:
-      - kv: list[(key, value)] for 'Label: Value' lines (including **Label:**)
-      - paras: list[str] of paragraph text
+      - kv: list[(key, value)] for key/value pairs
+      - paras: list[str] paragraphs
       - bullets: list[str] bullet items
+
+    Robust behavior:
+      • Handles "Label: Value" on the SAME line
+      • Handles label-only lines (e.g., "**Common Name**" or "### Scientific Name" or "Common Name:")
+        by taking the NEXT non-empty, non-heading, non-bullet line as the value
+      • Keeps original bullets
     """
-    # Remove duplicated first-line echoes like "1. General Information:" or "General Information:"
+    # Remove duplicated section-title echoes like "1. General Information:" or "General Information:"
     title_echo = r"^(?:\d+\s*[\.\)]\s*)?(overview|general information|care instructions|toxicity|propagation|common issues|interesting facts)\s*:?\s*$"
     body = re.sub(title_echo, "", body, flags=re.IGNORECASE | re.MULTILINE).strip()
 
-    lines = [ln.rstrip() for ln in body.split("\n") if ln.strip()]
-    kv, bullets, paras, pbuf = [], [], [], []
+    lines = [ln.rstrip() for ln in body.split("\n")]
 
-    pat_bold_kv = re.compile(r"^\s*\*\*\s*([^*\n]+?)\s*\*\*\s*:?\s*(.+)$")
-    pat_plain_kv = re.compile(r"^(?!\s*[-*]\s)([A-Z][A-Za-z0-9 \-/]{2,60})\s*:\s*(.+)$")
+    kv: List[Tuple[str, str]] = []
+    bullets: List[str] = []
+    paras: List[str] = []
+    pbuf: List[str] = []
 
-    for ln in lines:
-        if ln.lstrip().startswith(("-", "*")):
-            if pbuf:
-                paras.append(" ".join(pbuf).strip()); pbuf = []
-            bullets.append(ln.lstrip()[1:].strip())
+    # Patterns
+    pat_bold_kv   = re.compile(r"^\s*\*\*\s*([^*\n]+?)\s*\*\*\s*:?\s*(.+?)\s*$")
+    pat_plain_kv  = re.compile(r"^(?!\s*[-*]\s)([A-Z][A-Za-z0-9 \-/]{2,60})\s*:\s*(.+?)\s*$")
+    # Label-only (no value on this line) — accepts **Label**, ### Label, or plain Label[:]
+    pat_label_only = re.compile(
+        r"^\s*(?:\*\*\s*([^*\n]+?)\s*\*\*|#{2,6}\s+([^\n]+?)|([A-Z][A-Za-z0-9 \-/]{2,60}))\s*:?\s*$"
+    )
+    pat_heading_like_next = re.compile(  # used to decide if a next line is another heading/bullet
+        r"^\s*(?:[-*]\s+|#{2,6}\s+|\*\*[^*\n]+?\*\*\s*:?\s*$|[A-Z][A-Za-z0-9 \-/]{2,60}\s*:\s*$)"
+    )
+
+    def flush_paragraph():
+        nonlocal pbuf, paras
+        if any(s.strip() for s in pbuf):
+            paras.append(" ".join(s.strip() for s in pbuf if s.strip()))
+        pbuf = []
+
+    i = 0
+    n = len(lines)
+    while i < n:
+        raw = lines[i]
+        line = raw.strip()
+
+        # Skip empty lines early
+        if not line:
+            i += 1
             continue
 
-        m = pat_bold_kv.match(ln) or pat_plain_kv.match(ln)
+        # Bullets
+        if line.startswith(("- ", "* ")):
+            flush_paragraph()
+            bullets.append(line[2:].strip())
+            i += 1
+            continue
+
+        # KV on the same line (bold or plain)
+        m = pat_bold_kv.match(line) or pat_plain_kv.match(line)
         if m:
-            if pbuf:
-                paras.append(" ".join(pbuf).strip()); pbuf = []
-            key = m.group(1).strip().rstrip(":")
-            val = m.group(2).strip()
+            flush_paragraph()
+            key = (m.group(1) or "").strip().rstrip(":")
+            val = (m.group(2) or "").strip()
             kv.append((key, val))
-        else:
-            pbuf.append(ln)
+            i += 1
+            continue
 
-    if pbuf:
-        paras.append(" ".join(pbuf).strip())
+        # Label-only line: take next non-empty, non-heading/bullet line as the value
+        m = pat_label_only.match(line)
+        if m:
+            flush_paragraph()
+            key = (m.group(1) or m.group(2) or m.group(3) or "").strip().rstrip(":")
+            value = ""
+            j = i + 1
+            while j < n:
+                nxt = lines[j].strip()
+                if not nxt:  # skip blank lines between label and value
+                    j += 1
+                    continue
+                # if the next is clearly another heading/bullet/label, stop (no value captured)
+                if pat_heading_like_next.match(nxt):
+                    break
+                value = nxt
+                j += 1
+                break
+            kv.append((key, value))
+            i = j if j > i + 1 else i + 1
+            continue
 
+        # Otherwise, it's paragraph text
+        pbuf.append(line)
+        i += 1
+
+    flush_paragraph()
     return kv, paras, bullets
-
-
-def _render_kv_panel(kv: List[Tuple[str, str]]) -> None:
-    """Key/Value grid using Streamlit columns, wrapped in a subtle panel."""
-    if not kv:
-        return
-    st.html("<div class='kv-panel'></div>")  # thin border background
-    # We render rows right after; panel is just a background anchor above.
-    for k, v in kv:
-        c1, c2 = st.columns([1, 3], gap="small")
-        with c1:
-            st.markdown(f"**{k}:**")
-        with c2:
-            st.markdown(v)
-
-
-def _render_section(title: str, icon: str, body: str) -> None:
-    st.html(f'<div class="chip">{_html.escape(icon)} {_html.escape(title)}</div>')
-    kv, paras, bullets = _extract_blocks(body)
-    _render_kv_panel(kv)
-    for p in paras:
-        st.markdown(p)
-    if bullets:
-        st.markdown("\n".join(f"- {b}" for b in bullets))
 
 
 # =========================================================
