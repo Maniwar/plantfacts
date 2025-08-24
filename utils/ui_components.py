@@ -1,8 +1,8 @@
 """
 UI Components Module
-Reusable UI components with dark theme support and image fallback
+Reusable UI components with better image handling and improved UX
 Author: Maniwar
-Version: 2.4.0 - Dark theme support and image fallback
+Version: 2.5.0 - Better images and expanded sections for better UX
 """
 
 import streamlit as st
@@ -10,48 +10,7 @@ import re
 from gtts import gTTS
 from io import BytesIO
 from typing import Dict, Optional
-import base64
-
-def get_fallback_plant_svg():
-    """
-    Generate a beautiful fallback plant SVG when image fails to load
-    """
-    svg = """
-    <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="leafGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
-            </linearGradient>
-            <linearGradient id="potGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" style="stop-color:#92400e;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#78350f;stop-opacity:1" />
-            </linearGradient>
-        </defs>
-        
-        <!-- Background circle -->
-        <circle cx="200" cy="200" r="190" fill="#f0fdf4" opacity="0.3"/>
-        
-        <!-- Pot -->
-        <path d="M 150 250 L 170 350 L 230 350 L 250 250 Z" fill="url(#potGradient)"/>
-        <rect x="140" y="240" width="120" height="20" rx="5" fill="#92400e"/>
-        
-        <!-- Stem -->
-        <rect x="195" y="180" width="10" height="80" fill="#059669"/>
-        
-        <!-- Leaves -->
-        <ellipse cx="180" cy="180" rx="30" ry="50" fill="url(#leafGradient)" transform="rotate(-20 180 180)"/>
-        <ellipse cx="220" cy="180" rx="30" ry="50" fill="url(#leafGradient)" transform="rotate(20 220 180)"/>
-        <ellipse cx="200" cy="150" rx="25" ry="45" fill="url(#leafGradient)"/>
-        
-        <!-- Decorative dots -->
-        <circle cx="150" cy="150" r="3" fill="#10b981" opacity="0.5"/>
-        <circle cx="250" cy="160" r="3" fill="#10b981" opacity="0.5"/>
-        <circle cx="160" cy="220" r="3" fill="#10b981" opacity="0.5"/>
-        <circle cx="240" cy="210" r="3" fill="#10b981" opacity="0.5"/>
-    </svg>
-    """
-    return f"data:image/svg+xml;base64,{base64.b64encode(svg.encode()).decode()}"
+import urllib.parse
 
 def load_custom_css():
     """
@@ -74,35 +33,13 @@ def load_custom_css():
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         
-        /* Light theme */
-        [data-theme="light"] {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
-            --shadow-color: rgba(0,0,0,0.1);
-        }
-        
-        /* Dark theme */
-        [data-theme="dark"], 
-        .stApp[data-testid="stApp"][data-theme="dark"],
-        [data-testid="stAppViewContainer"][data-theme="dark"] {
-            --bg-primary: #1e293b;
-            --bg-secondary: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --border-color: #475569;
-            --shadow-color: rgba(0,0,0,0.3);
-        }
-        
         /* Beautiful Header - works in both themes */
         .header-container {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 3rem 2rem;
             border-radius: 24px;
             margin-bottom: 2rem;
-            box-shadow: 0 20px 40px var(--shadow-color);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
             position: relative;
             overflow: hidden;
         }
@@ -160,7 +97,7 @@ def load_custom_css():
             font-weight: 400;
         }
         
-        /* Analysis Container - dark theme compatible */
+        /* Analysis Container */
         .analysis-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -174,14 +111,20 @@ def load_custom_css():
             gap: 12px;
         }
         
-        /* Metrics - dark theme aware */
+        /* Metrics */
         [data-testid="metric-container"] {
-            background: var(--bg-primary);
-            border: 2px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #e2e8f0;
             padding: 1.5rem;
             border-radius: 16px;
-            box-shadow: 0 4px 12px var(--shadow-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Dark theme metric adjustment */
+        [data-theme="dark"] [data-testid="metric-container"] {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: #475569;
         }
         
         [data-testid="metric-container"]:hover {
@@ -191,7 +134,7 @@ def load_custom_css():
         }
         
         [data-testid="metric-container"] label {
-            color: var(--text-secondary);
+            color: #64748b;
             font-weight: 600;
             font-size: 0.875rem;
             text-transform: uppercase;
@@ -201,11 +144,10 @@ def load_custom_css():
         [data-testid="metric-container"] [data-testid="metric-value"] {
             font-size: 1.75rem;
             font-weight: 700;
-            color: var(--text-primary);
             font-family: 'Space Grotesk', sans-serif;
         }
         
-        /* Buttons - always gradient */
+        /* Buttons */
         .stButton > button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white !important;
@@ -223,13 +165,7 @@ def load_custom_css():
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
         
-        /* Container with border - dark theme compatible */
-        .stContainer > div {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-        }
-        
-        /* Success/Info/Warning - vibrant in both themes */
+        /* Success/Info/Warning */
         .stSuccess {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
@@ -257,49 +193,45 @@ def load_custom_css():
             font-weight: 500;
         }
         
-        /* Radio buttons - dark theme compatible */
-        .stRadio > div[role="radiogroup"] {
-            background: var(--bg-secondary);
-            padding: 0.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px var(--shadow-color);
-        }
-        
-        /* Expander - dark theme compatible */
+        /* Expander headers */
         .streamlit-expanderHeader {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border-radius: 12px;
             font-weight: 600;
-            padding: 1rem;
-            transition: all 0.3s ease;
-        }
-        
-        .streamlit-expanderHeader:hover {
-            background: var(--bg-primary);
+            font-size: 1.1rem;
         }
         
         /* Images */
         .stImage {
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 8px 24px var(--shadow-color);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
         }
         
-        /* Plant fallback image container */
-        .plant-fallback {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        /* Plant image container */
+        .plant-image-container {
+            position: relative;
+            width: 100%;
             border-radius: 16px;
-            padding: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 300px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         }
         
-        /* Dark mode plant fallback */
-        [data-theme="dark"] .plant-fallback {
-            background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+        .plant-image-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .plant-image-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            padding: 1rem;
+            color: white;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
         
         /* Divider */
@@ -307,10 +239,10 @@ def load_custom_css():
             margin: 3rem 0;
             border: none;
             height: 2px;
-            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
         }
         
-        /* Footer - works in both themes */
+        /* Footer */
         .footer-container {
             background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             padding: 3rem;
@@ -355,50 +287,54 @@ def render_header():
     """
     st.markdown(header_html, unsafe_allow_html=True)
 
-def render_plant_image_with_fallback(plant_name: str):
+def get_plant_image_url(plant_name: str) -> str:
     """
-    Render plant image with fallback to beautiful SVG if image fails
+    Get a reliable plant image URL using multiple fallback sources
     """
-    from utils.config import AppConfig
-    config = AppConfig()
+    # Clean the plant name for URL
+    clean_name = urllib.parse.quote(plant_name.lower())
     
-    # Try Unsplash image
-    image_url = f"https://source.unsplash.com/{config.IMAGE_WIDTH}x{config.IMAGE_HEIGHT}/?{plant_name.replace(' ', ',')},plant,botanical,nature"
+    # List of image sources to try (in order of preference)
+    image_sources = [
+        # 1. Pexels (reliable, high quality)
+        f"https://images.pexels.com/photos/1407305/pexels-photo-1407305.jpeg?auto=compress&cs=tinysrgb&w=800",  # Generic beautiful plant
+        
+        # 2. Picsum (Lorem Picsum - always works)
+        f"https://picsum.photos/seed/{clean_name}/800/600",
+        
+        # 3. Unsplash with specific collection
+        f"https://source.unsplash.com/800x600/?{clean_name},plant,flower,botanical",
+        
+        # 4. Generic plant image from Pexels
+        "https://images.pexels.com/photos/1072179/pexels-photo-1072179.jpeg?auto=compress&cs=tinysrgb&w=800"
+    ]
     
-    # Create HTML with fallback
-    image_html = f"""
-    <div style="position: relative; width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.12);">
-        <img src="{image_url}" 
-             alt="{plant_name}" 
-             style="width: 100%; height: auto; display: block; border-radius: 16px;"
-             onerror="this.onerror=null; this.src='{get_fallback_plant_svg()}';">
-        <div style="position: absolute; bottom: 0; left: 0; right: 0; 
-                    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-                    padding: 1rem; border-radius: 0 0 16px 16px;">
-            <p style="color: white; margin: 0; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-                🌿 {plant_name}
-            </p>
-        </div>
-    </div>
-    """
+    # For common plants, use specific known good images
+    common_plants = {
+        "rose": "https://images.pexels.com/photos/56866/garden-rose-red-pink-56866.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "cactus": "https://images.pexels.com/photos/1903965/pexels-photo-1903965.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "monstera": "https://images.pexels.com/photos/3644742/pexels-photo-3644742.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "succulent": "https://images.pexels.com/photos/1011302/pexels-photo-1011302.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "orchid": "https://images.pexels.com/photos/16868886/pexels-photo-16868886.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "fern": "https://images.pexels.com/photos/1470171/pexels-photo-1470171.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "tulip": "https://images.pexels.com/photos/54332/tulip-flower-blossom-bloom-54332.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "sunflower": "https://images.pexels.com/photos/46216/sunflower-flowers-bright-yellow-46216.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "lavender": "https://images.pexels.com/photos/207518/pexels-photo-207518.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "bamboo": "https://images.pexels.com/photos/279321/pexels-photo-279321.jpeg?auto=compress&cs=tinysrgb&w=800"
+    }
     
-    st.markdown(image_html, unsafe_allow_html=True)
-
-def get_plant_image(plant_name: str) -> str:
-    """
-    Get a plant image URL from Unsplash (keeping for backward compatibility)
-    """
-    from utils.config import AppConfig
-    config = AppConfig()
-    return f"https://source.unsplash.com/{config.IMAGE_WIDTH}x{config.IMAGE_HEIGHT}/?{plant_name.replace(' ', ',')},plant,botanical,garden"
+    # Check if we have a specific image for this plant
+    for key, url in common_plants.items():
+        if key in plant_name.lower():
+            return url
+    
+    # Use Picsum as reliable fallback with seed based on plant name
+    return f"https://picsum.photos/seed/{clean_name}/800/600"
 
 def extract_quick_facts(analysis: str) -> Dict[str, str]:
     """
     Extract quick facts from plant analysis
     """
-    from utils.config import AppConfig
-    config = AppConfig()
-    
     facts = {}
     analysis_lower = analysis.lower()
     
@@ -458,7 +394,7 @@ def clean_text_for_tts(text: str) -> str:
 
 def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bool = True):
     """
-    Render beautiful plant analysis display with dark theme support
+    Render beautiful plant analysis display with better UX (expanded sections)
     """
     # Main container with nice styling
     with st.container():
@@ -474,8 +410,9 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
         col1, col2 = st.columns([2, 3], gap="large")
         
         with col1:
-            # Plant image with fallback
-            render_plant_image_with_fallback(plant_name)
+            # Plant image with reliable source
+            image_url = get_plant_image_url(plant_name)
+            st.image(image_url, caption=f"🌿 {plant_name}", use_container_width=True)
             
             # Quick Facts with beautiful cards
             st.markdown("### ⭐ Quick Facts")
@@ -504,17 +441,17 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                         st.warning(f"Audio unavailable: {str(e)}")
         
         with col2:
-            # Detailed analysis with scrollable container
+            # Detailed analysis - EXPANDED BY DEFAULT for better UX
             st.markdown("### 📋 Detailed Information")
             
-            # Parse and display sections beautifully
+            # Parse and display sections - ALL EXPANDED for better UX
             sections = analysis.split('\n\n')
             
             for section in sections:
                 if section.strip():
                     section_lower = section.lower()
                     
-                    # Format each section type differently
+                    # Format each section type - ALL EXPANDED=TRUE
                     if any(x in section_lower for x in ["general information", "**1."]):
                         with st.expander("📝 General Information", expanded=True):
                             content = re.sub(r'\*\*(?:1\.|General Information:?)\*\*:?\s*', '', section)
@@ -527,7 +464,7 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                     
                     elif any(x in section_lower for x in ["toxicity", "**3."]):
                         is_toxic = "toxic" in section_lower and "not toxic" not in section_lower
-                        with st.expander("⚠️ Safety Information", expanded=is_toxic):
+                        with st.expander("⚠️ Safety Information", expanded=True):
                             content = re.sub(r'\*\*(?:3\.|Toxicity:?)\*\*:?\s*', '', section)
                             if is_toxic:
                                 st.warning(content)
@@ -535,11 +472,12 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                                 st.success(content)
                     
                     elif any(x in section_lower for x in ["propagation", "**4."]):
-                        with st.expander("🌿 Propagation Methods", expanded=False):
+                        with st.expander("🌿 Propagation Methods", expanded=True):
                             content = re.sub(r'\*\*(?:4\.|Propagation:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
                     elif any(x in section_lower for x in ["common issues", "problems", "**5."]):
+                        # This one can stay collapsed as it's less critical
                         with st.expander("🐛 Common Issues & Solutions", expanded=False):
                             content = re.sub(r'\*\*(?:5\.|Common Issues:?)\*\*:?\s*', '', section)
                             st.markdown(content)
@@ -550,9 +488,9 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                             st.info(content)
                     
                     else:
-                        # Other sections
+                        # Other sections - expanded if substantial
                         if section.strip() and len(section.strip()) > 20:
-                            with st.expander("📌 Additional Information", expanded=False):
+                            with st.expander("📌 Additional Information", expanded=True):
                                 st.markdown(section)
 
 def render_custom_css():
@@ -584,7 +522,12 @@ def render_legal_footer():
     st.markdown("""
     <div class="footer-container">
         <h3>🌿 Plant Facts Explorer</h3>
-        <p>Made with ❤️ by Maniwar • Version 2.4.0</p>
+        <p>Made with ❤️ by Maniwar • Version 2.5.0</p>
         <p style="opacity: 0.8; font-size: 0.9rem;">© 2024 • Powered by OpenAI & Streamlit</p>
     </div>
     """, unsafe_allow_html=True)
+
+# For backward compatibility
+def get_plant_image(plant_name: str) -> str:
+    """Legacy function - redirects to new image function"""
+    return get_plant_image_url(plant_name)
