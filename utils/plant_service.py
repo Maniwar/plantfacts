@@ -39,57 +39,108 @@ class PlantService:
         self.cache = cache_service
         self.config = AppConfig()
     
+    def is_ready(self) -> bool:
+        """Check if the service is ready to use"""
+        return self.client is not None
+    
+    def _normalize_plant_name(self, plant_name: str) -> str:
+        """
+        Normalize plant name for consistent caching
+        
+        Args:
+            plant_name: Raw plant name
+            
+        Returns:
+            Normalized plant name
+        """
+        # Strip whitespace and convert to title case for consistency
+        return plant_name.strip().title()
+    
     def get_analysis_stream(self, plant_name: str) -> Generator[str, None, None]:
         """
-        Get plant analysis with streaming support
+        Get plant analysis with streaming support (ONLY for new content)
         
         Args:
             plant_name: Name of the plant to analyze
             
         Yields:
-            Chunks of analysis text
+            Chunks of analysis text (only streams if not cached)
         """
-        # Check cache first
-        cache_key = f"{self.config.CACHE_KEY_PREFIX}{plant_name}"
-        cached_result = self.cache.get(cache_key)
+        # Check if OpenAI client is initialized
+        if not self.client:
+            yield "Error: OpenAI API not configured. Please check your API key."
+            return
         
+        # Normalize plant name for consistent caching
+        plant_name = self._normalize_plant_name(plant_name)
+        cache_key = f"{self.config.CACHE_KEY_PREFIX}{plant_name}"
+        
+        # Double-check cache doesn't exist (shouldn't happen if called correctly)
+        cached_result = self.cache.get(cache_key)
         if cached_result:
-            # Return cached result immediately - NO STREAMING!
+            logger.warning(f"get_analysis_stream called for cached plant: {plant_name}")
             yield cached_result
-        else:
-            # Generate new analysis with streaming
-            full_response = ""
-            try:
-                stream = self.client.chat.completions.create(
-                    model=self.config.OPENAI_MODEL,
-                    messages=[
-                        {
-                            "role": "system", 
-                            "content": "You are a plant expert providing detailed information about various plants."
-                        },
-                        {
-                            "role": "user", 
-                            "content": self.config.ANALYSIS_PROMPT.format(plant_name=plant_name)
-                        }
-                    ],
-                    max_tokens=self.config.MAX_TOKENS,
-                    stream=True
-                )
-                
-                for chunk in stream:
-                    if chunk.choices[0].delta.content is not None:
-                        content = chunk.choices[0].delta.content
-                        full_response += content
-                        yield content
-                
-                # Cache the complete response after streaming is done
-                if full_response:
-                    self.cache.set(cache_key, full_response, expire=self.config.CACHE_TTL)
-                    logger.info(f"Cached analysis for: {plant_name}")
+            return
+        
+        # Generate new analysis with streaming
+        full_response = ""
+        try:
+            logger.info(f"Generating new analysis for: {plant_name}")
+            stream = self.client.chat.completions.create(
+                model=self.config.OPENAI_MODEL,
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "You are a plant expert providing detailed information about various plants."
+                    },
+                    {
+                        "role": "user", 
+                        "content": self.config.ANALYSIS_PROMPT.format(plant_name=plant_name)
+                    }
+                ],
+                max_tokens=self.config.MAX_TOKENS,
+                stream=True
+            )
+            
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    content = chunk.choices[0].delta.content
+                    full_response += content
+                    yield content
+            
+            # Cache the complete response after streaming is done
+            if full_response:
+                success = self.cache.set(cache_key, full_response, expire=self.config.CACHE_TTL)
+                if success:
+                    logger.info(f"Successfully cached analysis for: {plant_name} (permanent cache)")
+                else:
+                    logger.warning(f"Failed to cache analysis for: {plant_name}")
                     
-            except Exception as e:
-                logger.error(f"Error generating analysis for {plant_name}: {e}")
-                yield f"Error generating analysis: {str(e)}"
+        except Exception as e:
+            logger.error(f"Error generating analysis for {plant_name}: {e}")
+            yield f"Error generating analysis: {str(e)}"
+    
+    def get_cached_analysis(self, plant_name: str) -> Optional[str]:
+        """
+        Get cached analysis if available
+        
+        Args:
+            plant_name: Name of the plant
+            
+        Returns:
+            Cached analysis or None
+        """
+        # Normalize plant name for consistent caching
+        plant_name = self._normalize_plant_name(plant_name)
+        cache_key = f"{self.config.CACHE_KEY_PREFIX}{plant_name}"
+        result = self.cache.get(cache_key)
+        
+        if result:
+            logger.info(f"Cache HIT for: {plant_name}")
+        else:
+            logger.info(f"Cache MISS for: {plant_name}")
+        
+        return result
     
     def identify_plant_from_image(self, image_b64: str) -> str:
         """
@@ -134,18 +185,3 @@ class PlantService:
         except Exception as e:
             logger.error(f"Error identifying plant from image: {e}")
             raise Exception(f"Failed to identify plant: {str(e)}")
-    
-    def is_ready(self) -> bool:
-        """Check if the service is ready to use"""
-        return self.client is not None
-        """
-        Get cached analysis if available
-        
-        Args:
-            plant_name: Name of the plant
-            
-        Returns:
-            Cached analysis or None
-        """
-        cache_key = f"{self.config.CACHE_KEY_PREFIX}{plant_name}"
-        return self.cache.get(cache_key)
