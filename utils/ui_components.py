@@ -2,7 +2,7 @@
 UI Components Module
 Verbatim LLM rendering + animations (leaf, sheen, typewriter), reliable images
 Author: Maniwar
-Version: 7.1.0 - Fixed mobile header cutoff with responsive subtitles
+Version: 8.0.0 - Simplified particles, mobile-optimized search
 """
 
 from __future__ import annotations
@@ -273,22 +273,22 @@ def render_header(
 
 
 # =========================================================
-# Single Stunning Particle Effect - Magical Garden
+# Subtle, elegant particle effect
 # =========================================================
 def render_particles(
     enabled: bool = True,
-    height: int = 120,
+    height: int = 100,
 ) -> None:
     """
-    Single stunning particle effect: Magical Garden
-    Combines multiple natural elements for a beautiful, cohesive effect
+    Subtle, elegant particle effect - just gentle floating dots
+    Much more refined and less distracting
     """
     if not enabled:
         return
 
     from streamlit.components.v1 import html as _html_iframe
     
-    # Use a simpler, more reliable approach with CSS animations
+    # Very subtle, minimal particle effect
     html_code = """
     <!DOCTYPE html>
     <html>
@@ -312,294 +312,94 @@ def render_particles(
                 overflow: hidden;
             }
             
-            /* Floating light orbs */
-            .orb {
+            /* Subtle floating dots */
+            .dot {
                 position: absolute;
+                width: 3px;
+                height: 3px;
+                background: rgba(102, 126, 234, 0.15);
                 border-radius: 50%;
-                background: radial-gradient(circle at 30% 30%, 
-                    rgba(255, 255, 255, 0.3), 
-                    rgba(147, 197, 253, 0.2),
-                    transparent);
-                filter: blur(1px);
-                animation: float-orb 20s infinite ease-in-out;
+                animation: gentle-float 20s infinite ease-in-out;
             }
             
-            .orb:nth-child(1) {
-                width: 80px; height: 80px;
-                left: 10%; top: 20%;
-                animation-duration: 18s;
-                animation-delay: 0s;
-            }
-            
-            .orb:nth-child(2) {
-                width: 60px; height: 60px;
-                left: 70%; top: 40%;
-                animation-duration: 22s;
-                animation-delay: 2s;
-            }
-            
-            .orb:nth-child(3) {
-                width: 100px; height: 100px;
-                left: 40%; top: 60%;
-                animation-duration: 25s;
-                animation-delay: 4s;
-            }
-            
-            .orb:nth-child(4) {
-                width: 50px; height: 50px;
-                left: 85%; top: 15%;
-                animation-duration: 20s;
-                animation-delay: 1s;
-            }
-            
-            .orb:nth-child(5) {
-                width: 70px; height: 70px;
-                left: 25%; top: 75%;
-                animation-duration: 23s;
-                animation-delay: 3s;
-            }
-            
-            /* Falling leaves */
-            .leaf {
-                position: absolute;
-                font-size: 20px;
-                animation: fall-leaf 12s infinite linear;
-                opacity: 0;
-            }
-            
-            .leaf:nth-child(6) {
+            .dot:nth-child(1) {
                 left: 10%;
-                animation-delay: 0s;
-                animation-duration: 11s;
-            }
-            
-            .leaf:nth-child(7) {
-                left: 30%;
-                animation-delay: 2s;
-                animation-duration: 13s;
-            }
-            
-            .leaf:nth-child(8) {
-                left: 50%;
-                animation-delay: 4s;
-                animation-duration: 10s;
-            }
-            
-            .leaf:nth-child(9) {
-                left: 70%;
-                animation-delay: 1s;
-                animation-duration: 12s;
-            }
-            
-            .leaf:nth-child(10) {
-                left: 90%;
-                animation-delay: 3s;
-                animation-duration: 14s;
-            }
-            
-            /* Floating petals */
-            .petal {
-                position: absolute;
-                width: 15px;
-                height: 15px;
-                background: radial-gradient(ellipse, 
-                    rgba(255, 182, 193, 0.8), 
-                    rgba(255, 105, 180, 0.4));
-                border-radius: 0 100% 0 100%;
-                animation: fall-petal 15s infinite ease-in-out;
-                opacity: 0;
-            }
-            
-            .petal:nth-child(11) {
-                left: 15%;
-                animation-delay: 0.5s;
-                animation-duration: 14s;
-            }
-            
-            .petal:nth-child(12) {
-                left: 35%;
-                animation-delay: 2.5s;
-                animation-duration: 16s;
-            }
-            
-            .petal:nth-child(13) {
-                left: 55%;
-                animation-delay: 1.5s;
-                animation-duration: 13s;
-            }
-            
-            .petal:nth-child(14) {
-                left: 75%;
-                animation-delay: 3.5s;
-                animation-duration: 15s;
-            }
-            
-            .petal:nth-child(15) {
-                left: 95%;
-                animation-delay: 4.5s;
-                animation-duration: 17s;
-            }
-            
-            /* Glowing particles */
-            .glow {
-                position: absolute;
-                width: 4px;
-                height: 4px;
-                background: rgba(255, 255, 200, 0.8);
-                border-radius: 50%;
-                box-shadow: 0 0 10px rgba(255, 255, 200, 0.5);
-                animation: float-glow 20s infinite ease-in-out;
-                opacity: 0;
-            }
-            
-            .glow:nth-child(16) {
-                left: 20%;
-                animation-delay: 0s;
-                animation-duration: 18s;
-            }
-            
-            .glow:nth-child(17) {
-                left: 40%;
-                animation-delay: 1s;
                 animation-duration: 19s;
+                animation-delay: 0s;
             }
             
-            .glow:nth-child(18) {
-                left: 60%;
-                animation-delay: 2s;
+            .dot:nth-child(2) {
+                left: 20%;
                 animation-duration: 21s;
-            }
-            
-            .glow:nth-child(19) {
-                left: 80%;
                 animation-delay: 3s;
-                animation-duration: 20s;
             }
             
-            .glow:nth-child(20) {
-                left: 45%;
-                animation-delay: 4s;
+            .dot:nth-child(3) {
+                left: 35%;
+                animation-duration: 18s;
+                animation-delay: 2s;
+            }
+            
+            .dot:nth-child(4) {
+                left: 50%;
                 animation-duration: 22s;
+                animation-delay: 5s;
             }
             
-            /* Animations */
-            @keyframes float-orb {
+            .dot:nth-child(5) {
+                left: 65%;
+                animation-duration: 20s;
+                animation-delay: 1s;
+            }
+            
+            .dot:nth-child(6) {
+                left: 80%;
+                animation-duration: 23s;
+                animation-delay: 4s;
+            }
+            
+            .dot:nth-child(7) {
+                left: 90%;
+                animation-duration: 19s;
+                animation-delay: 6s;
+            }
+            
+            /* Very gentle floating animation */
+            @keyframes gentle-float {
                 0%, 100% {
-                    transform: translate(0, 0) scale(1);
+                    transform: translateY(100vh) translateX(0);
+                    opacity: 0;
+                }
+                10% {
                     opacity: 0.3;
                 }
-                25% {
-                    transform: translate(30px, -20px) scale(1.1);
-                    opacity: 0.4;
-                }
-                50% {
-                    transform: translate(-20px, 10px) scale(0.95);
+                90% {
                     opacity: 0.3;
                 }
-                75% {
-                    transform: translate(10px, -30px) scale(1.05);
-                    opacity: 0.35;
-                }
-            }
-            
-            @keyframes fall-leaf {
-                0% {
-                    transform: translateY(-20px) rotate(0deg);
-                    opacity: 0;
-                }
-                10% {
-                    opacity: 0.7;
-                }
-                90% {
-                    opacity: 0.7;
-                }
                 100% {
-                    transform: translateY(calc(100vh + 20px)) rotate(360deg);
+                    transform: translateY(-20px) translateX(10px);
                     opacity: 0;
-                }
-            }
-            
-            @keyframes fall-petal {
-                0% {
-                    transform: translateY(-20px) translateX(0) rotate(0deg);
-                    opacity: 0;
-                }
-                10% {
-                    opacity: 0.6;
-                }
-                25% {
-                    transform: translateY(25vh) translateX(20px) rotate(90deg);
-                }
-                50% {
-                    transform: translateY(50vh) translateX(-15px) rotate(180deg);
-                }
-                75% {
-                    transform: translateY(75vh) translateX(25px) rotate(270deg);
-                }
-                90% {
-                    opacity: 0.6;
-                }
-                100% {
-                    transform: translateY(calc(100vh + 20px)) translateX(0) rotate(360deg);
-                    opacity: 0;
-                }
-            }
-            
-            @keyframes float-glow {
-                0%, 100% {
-                    transform: translateY(0) translateX(0);
-                    opacity: 0;
-                }
-                10% {
-                    opacity: 0.8;
-                }
-                50% {
-                    transform: translateY(-30px) translateX(20px);
-                    opacity: 0.4;
-                }
-                90% {
-                    opacity: 0.8;
                 }
             }
             
             /* Reduced motion support */
             @media (prefers-reduced-motion: reduce) {
-                .orb, .leaf, .petal, .glow {
-                    animation: none !important;
-                    opacity: 0.3;
+                .dot {
+                    animation: none;
+                    opacity: 0.1;
                 }
             }
         </style>
     </head>
     <body>
         <div class="particle-container">
-            <!-- Light orbs -->
-            <div class="orb"></div>
-            <div class="orb"></div>
-            <div class="orb"></div>
-            <div class="orb"></div>
-            <div class="orb"></div>
-            
-            <!-- Falling leaves -->
-            <div class="leaf">🍃</div>
-            <div class="leaf">🍃</div>
-            <div class="leaf">🍃</div>
-            <div class="leaf">🍃</div>
-            <div class="leaf">🍃</div>
-            
-            <!-- Floating petals -->
-            <div class="petal"></div>
-            <div class="petal"></div>
-            <div class="petal"></div>
-            <div class="petal"></div>
-            <div class="petal"></div>
-            
-            <!-- Glowing particles -->
-            <div class="glow"></div>
-            <div class="glow"></div>
-            <div class="glow"></div>
-            <div class="glow"></div>
-            <div class="glow"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
         </div>
     </body>
     </html>
@@ -914,7 +714,7 @@ def render_legal_footer() -> None:
         """
         <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
              background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
-          <div>🌿 Plant Facts Explorer • Version 7.1.0</div>
+          <div>🌿 Plant Facts Explorer • Version 8.0.0</div>
           <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
         </div>
         """
