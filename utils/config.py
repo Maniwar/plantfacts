@@ -1,6 +1,7 @@
 """
 Configuration module for Plant Facts Explorer
 Central place for all app configuration and constants
+Author: Maniwar
 """
 
 class AppConfig:
@@ -9,13 +10,15 @@ class AppConfig:
     # App Settings
     PAGE_TITLE = "Plant Facts Explorer"
     PAGE_ICON = "🌿"
+    APP_VERSION = "2.0.0"
+    AUTHOR = "Maniwar"
     
     # Input Methods
     INPUT_METHODS = ["🔍 Search Box", "📁 File Upload", "📸 Camera Capture"]
     
     # OpenAI Settings
     OPENAI_MODEL = "gpt-4o-mini"
-    MAX_TOKENS = 16000
+    MAX_TOKENS = 4096
     
     # Redis Cache Settings
     CACHE_KEY_PREFIX = "plant:"
