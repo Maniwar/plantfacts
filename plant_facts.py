@@ -2,7 +2,7 @@
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
 Author: Maniwar
-Version: 2.6.0 - Fixed particles and image handling
+Version: 4.3.0 - Enhanced search with Enter key + dropdown suggestions
 """
 
 import streamlit as st
@@ -21,7 +21,7 @@ if 'initialized' not in st.session_state:
     st.cache_resource.clear()
     st.session_state.initialized = True
 
-# Import streamlit_searchbox first
+# Import streamlit_searchbox
 from streamlit_searchbox import st_searchbox
 
 # Import utils modules directly
@@ -113,31 +113,57 @@ with st.container():
         label_visibility="collapsed"
     )
 
-# Search Box Method
+# Search Box Method - Enhanced with Enter key support
 if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
     with st.container(border=True):
         st.subheader("🔍 Search for Plants")
         
-        # Use columns for search layout
-        col1, col2 = st.columns([4, 1], gap="medium")
+        # Initialize session state
+        if 'current_search' not in st.session_state:
+            st.session_state.current_search = ""
         
-        with col1:
-            plant_name = st_searchbox(
-                search_function=get_search_suggestions,
-                placeholder="e.g., Monstera Deliciosa, Rose, Cactus...",
-                label=None,
-                clear_on_submit=False,
-                clearable=True,
-                key="plant_search",
-            )
+        # Use searchbox for dropdown suggestions
+        plant_name_from_dropdown = st_searchbox(
+            search_function=get_search_suggestions,
+            placeholder="Type plant name & select from dropdown or use the input below...",
+            label="Search with suggestions:",
+            clear_on_submit=False,
+            clearable=True,
+            key="plant_searchbox",
+        )
         
-        with col2:
-            # Search button with proper width
-            search_button = st.button("🔍 Search", type="primary", use_container_width=True)
+        # Alternative: Direct input with Enter key support
+        with st.form(key="direct_search_form", clear_on_submit=False):
+            col1, col2 = st.columns([4, 1], gap="medium")
+            
+            with col1:
+                st.caption("Or type and press Enter/Search (no dropdown needed):")
+                plant_name_direct = st.text_input(
+                    "Direct search",
+                    placeholder="e.g., Monstera Deliciosa, Rose, Cactus...",
+                    value=plant_name_from_dropdown if plant_name_from_dropdown else "",
+                    key="direct_search_input",
+                    label_visibility="collapsed"
+                )
+            
+            with col2:
+                st.caption("​")  # Empty space to align with input
+                search_button = st.form_submit_button("🔍 Search", type="primary", use_container_width=True)
+        
+        # Determine which input to use
+        plant_name = plant_name_direct if search_button else plant_name_from_dropdown
+        
+        # Show current selection
+        if plant_name and not search_button:
+            st.info(f"Selected from dropdown: **{plant_name}** - Click Search or select another")
         
         mute_audio = st.checkbox("🔇 Mute Audio", value=True)
     
-    if search_button and plant_name:
+    # Process search
+    if (search_button and plant_name_direct) or (plant_name_from_dropdown and plant_name_from_dropdown != st.session_state.current_search):
+        # Update current search
+        st.session_state.current_search = plant_name
+        
         try:
             # Normalize plant name for consistent caching
             plant_name = plant_name.strip().title()

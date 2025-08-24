@@ -10,7 +10,7 @@ class AppConfig:
     # App Settings
     PAGE_TITLE = "Plant Facts Explorer"
     PAGE_ICON = "🌿"
-    APP_VERSION = "4.1.0"  # Updated: Fixed mobile header cutoff with responsive subtitle
+    APP_VERSION = "4.3.0"  # Updated: Best of both worlds - Enter key + dropdown suggestions
     AUTHOR = "Maniwar"
     
     # Input Methods
