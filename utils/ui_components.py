@@ -126,7 +126,6 @@ def render_particles(
     Background visuals:
       • Linked dot particles (optional)
       • One large, subtle watermark with the PLANT NAME (HTML/CSS, always visible)
-    The iframe has a visible height so you can actually see it.
     """
     if not enabled:
         return
@@ -134,27 +133,20 @@ def render_particles(
     import json
     from streamlit.components.v1 import html as _html_iframe
 
-    label = (plant_name or "Plant").strip()
-    seed = abs(hash(label)) % (10**6)
+    label = (plant_name or "Plant").strip()  # <– uses the real plant_name if passed
+
     dot_count = 34 if show_dots else 0
 
-    # We avoid Python f-strings to prevent `{}` conflicts with JS.
     html_code = """
     <!doctype html><html><head><meta charset="utf-8"/>
     <style>
       :root { --wm-opacity: __OPACITY__; }
       html,body,#stage { margin:0; padding:0; height:100%; width:100%; background:transparent; }
-
-      /* Stage holds both particles and watermark */
       #stage { position:relative; pointer-events:none; }
-
-      /* tsParticles mounts here, behind the watermark */
       #tsp { position:absolute; inset:0; z-index:0; }
-
-      /* Watermark text */
       #wm {
         position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-        font: 700 clamp(48px, 18vw, 220px) "Space Grotesk", Inter, system-ui, -apple-system, sans-serif;
+        font: 700 clamp(48px, 18vw, 220px) "Space Grotesk", Inter, sans-serif;
         letter-spacing: .04em;
         color: #ffffff;
         opacity: var(--wm-opacity);
@@ -162,34 +154,24 @@ def render_particles(
         z-index: 1;
         white-space: nowrap;
         user-select: none;
-        -webkit-user-select: none;
         animation: floatSlow 18s ease-in-out infinite;
       }
-
       @keyframes floatSlow {
         0%   { transform: translate(-50%,-50%) rotate(0deg); }
         50%  { transform: translate(calc(-50% + 6px), calc(-50% - 6px)) rotate(3deg); }
         100% { transform: translate(-50%,-50%) rotate(0deg); }
       }
-
-      @media (prefers-reduced-motion: reduce) {
-        #wm { animation: none; }
-      }
-    </style>
-    </head><body>
+    </style></head><body>
       <div id="stage">
         <div id="tsp"></div>
         <div id="wm"></div>
       </div>
-
       <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
       <script>
         (async () => {
-          // Set watermark text safely
-          const wm = document.getElementById("wm");
-          wm.textContent = __LABEL_JSON__;
+          // Set watermark text
+          document.getElementById("wm").textContent = __LABEL__;
 
-          // Init particles (dots) if requested
           const DOT_COUNT = __DOT_COUNT__;
           if (DOT_COUNT > 0) {
             const engine = window.tsParticles;
@@ -203,7 +185,7 @@ def render_particles(
                 color: { value: ["#a7f3d0", "#93c5fd", "#c4b5fd"] },
                 opacity: { value: 0.25 },
                 size: { value: { min: 1, max: 3 } },
-                move: { enable: true, speed: 0.8, direction: "none", outModes: { default: "out" } },
+                move: { enable: true, speed: 0.8, outModes: { default: "out" } },
                 links: { enable: true, distance: 120, opacity: 0.12, color: "#cbd5e1" }
               }
             });
@@ -215,13 +197,12 @@ def render_particles(
 
     _html_iframe(
         html_code
-        .replace("__LABEL_JSON__", json.dumps(label))
+        .replace("__LABEL__", json.dumps(label))   # plant name goes here
         .replace("__DOT_COUNT__", str(dot_count))
         .replace("__OPACITY__", str(opacity)),
-        height=height,      # visible canvas area
+        height=height,
         scrolling=False,
     )
-
 
 
 # =========================================================
