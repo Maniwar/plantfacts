@@ -2,7 +2,7 @@
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
 Author: Maniwar
-Version: 2.5.0 - Better images and expanded sections for better UX
+Version: 2.6.0 - Fixed particles and image handling
 """
 
 import streamlit as st
@@ -158,7 +158,7 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
                 
                 # Use a container for streaming that will be replaced
                 with content_placeholder.container():
-                    st.markdown("### 📝 Live Analysis Stream")
+                    st.markdown("### 🔍 Live Analysis Stream")
                     analysis = ""
                     stream_container = st.empty()
                     
@@ -176,7 +176,7 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
                 else:
                     st.success("✅ Analysis complete!")
             
-            # Display the formatted analysis (replaces the streamed content)
+            # Display the formatted analysis (no uploaded image for search)
             st.divider()
             render_plant_analysis_display(plant_name, analysis, mute_audio)
             
@@ -198,15 +198,18 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
         mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_upload")
     
     if uploaded_image:
+        # Read image bytes once
+        image_bytes = uploaded_image.read()
+        uploaded_image.seek(0)  # Reset for potential re-reading
+        
         col1, col2 = st.columns([1, 2], gap="medium")
         
         with col1:
-            st.image(uploaded_image, caption='Uploaded Image', use_container_width=True)
+            st.image(image_bytes, caption='Uploaded Image', use_container_width=True)
         
         with col2:
             try:
                 with st.spinner("🤖 Identifying plant..."):
-                    image_bytes = uploaded_image.read()
                     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
                     
                     plant_name = plant_service.identify_plant_from_image(image_b64)
@@ -228,7 +231,7 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                     st.info("🌿 Generating detailed information...")
                     
                     with content_placeholder.container():
-                        st.markdown("### 📝 Live Analysis Stream")
+                        st.markdown("### 🔍 Live Analysis Stream")
                         analysis = ""
                         stream_container = st.empty()
                         
@@ -247,10 +250,15 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                 st.error(f"❌ Error processing image: {str(e)}")
                 logging.error(f"Image processing error: {str(e)}")
         
-        # Display formatted analysis if successful
+        # Display formatted analysis with the uploaded image
         if 'analysis' in locals():
             st.divider()
-            render_plant_analysis_display(plant_name, analysis, mute_audio)
+            render_plant_analysis_display(
+                plant_name, 
+                analysis, 
+                mute_audio,
+                uploaded_image_bytes=image_bytes  # Pass the uploaded image
+            )
 
 # Camera Capture Method
 elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
@@ -261,15 +269,18 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
         mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_camera")
     
     if captured_image:
+        # Read image bytes once
+        image_bytes = captured_image.read()
+        captured_image.seek(0)  # Reset for potential re-reading
+        
         col1, col2 = st.columns([1, 2], gap="medium")
         
         with col1:
-            st.image(captured_image, caption='Captured Image', use_container_width=True)
+            st.image(image_bytes, caption='Captured Image', use_container_width=True)
         
         with col2:
             try:
                 with st.spinner("🤖 Identifying plant..."):
-                    image_bytes = captured_image.read()
                     image_b64 = base64.b64encode(image_bytes).decode("utf-8")
                     
                     plant_name = plant_service.identify_plant_from_image(image_b64)
@@ -291,7 +302,7 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                     st.info("🌿 Generating detailed information...")
                     
                     with content_placeholder.container():
-                        st.markdown("### 📝 Live Analysis Stream")
+                        st.markdown("### 🔍 Live Analysis Stream")
                         analysis = ""
                         stream_container = st.empty()
                         
@@ -310,10 +321,15 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                 st.error(f"❌ Error processing image: {str(e)}")
                 logging.error(f"Camera capture error: {str(e)}")
         
-        # Display formatted analysis if successful
+        # Display formatted analysis with the captured image
         if 'analysis' in locals():
             st.divider()
-            render_plant_analysis_display(plant_name, analysis, mute_audio)
+            render_plant_analysis_display(
+                plant_name, 
+                analysis, 
+                mute_audio,
+                uploaded_image_bytes=image_bytes  # Pass the captured image
+            )
 
 # Footer
 render_legal_footer()

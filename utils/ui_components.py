@@ -2,7 +2,7 @@
 UI Components Module
 Verbatim LLM rendering + animations (leaf, sheen, typewriter), reliable images
 Author: Maniwar
-Version: 5.1.0
+Version: 5.2.0 - Fixed particles, improved image handling
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ import re
 from io import BytesIO
 from typing import Dict, Optional
 from urllib.parse import quote
+import hashlib
 
 import requests
 import streamlit as st
@@ -113,21 +114,20 @@ def render_header(
 
 
 # =========================================================
-# Optional particle background (JS in iframe)
+# Fixed particle background with stable performance
 # =========================================================
 def render_particles(
     enabled: bool = False,
     height: int = 100,
-    preset: str = "leaves",   # "aurora" | "constellation" | "leaves"
+    preset: str = "leaves",
     watermark_text: str = "AI Analysis",
     watermark_opacity: float = 0.12,
-    intensity: float = 1.0,   # 0.5..1.5 scales motion/quantity
+    intensity: float = 1.0,
     show_watermark: bool = True,
 ) -> None:
     """
-    Fancy particle backgrounds with auto-resizing watermark text.
-    - Text size scales down for short containers (e.g. 100px).
-    - Presets: aurora, constellation, leaves.
+    Fixed particle backgrounds with stable performance.
+    Prevents speed accumulation and ensures smooth animations.
     """
     if not enabled:
         return
@@ -135,14 +135,17 @@ def render_particles(
     from streamlit.components.v1 import html as _html_iframe
     import json
 
+    # Generate unique container ID to prevent accumulation
+    container_id = f"tsp_{hash(str(st.session_state.get('particle_refresh', 0))) % 10000}"
+    
     # Clamp/sanitize
-    preset = (preset or "aurora").lower().strip()
+    preset = (preset or "leaves").lower().strip()
     if preset not in {"aurora", "constellation", "leaves"}:
         preset = "leaves"
-    intensity = max(0.4, min(1.6, float(intensity)))
+    intensity = max(0.5, min(1.5, float(intensity)))
     wm = (watermark_text or "").strip() or "AI Analysis"
 
-    # Decide font sizing based on height
+    # Font sizing based on height
     if height <= 120:
         font_css = '600 clamp(12px, 4vw, 32px)'
     elif height <= 200:
@@ -150,125 +153,254 @@ def render_particles(
     else:
         font_css = '800 clamp(24px, 8vw, 96px)'
 
-    html_code = """
+    html_code = f"""
     <!doctype html><html><head><meta charset="utf-8"/>
     <style>
-      :root { --wm-opacity: __WM_OPACITY__; }
-      html,body,#stage { margin:0; padding:0; height:100%; width:100%; background:transparent; }
-      #stage { position:relative; pointer-events:none; }
-      #tsp { position:absolute; inset:0; z-index:0; }
-      #wm {
+      :root {{ --wm-opacity: {watermark_opacity}; }}
+      html,body,#stage {{ margin:0; padding:0; height:100%; width:100%; background:transparent; overflow:hidden; }}
+      #stage {{ position:relative; pointer-events:none; }}
+      #{container_id} {{ position:absolute; inset:0; z-index:0; }}
+      #wm {{
         position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-        font: __FONT__ "Space Grotesk", Inter, system-ui, -apple-system, sans-serif;
+        font: {font_css} "Space Grotesk", Inter, system-ui, -apple-system, sans-serif;
         letter-spacing:.03em; color:#fff; opacity:var(--wm-opacity);
         text-shadow:0 2px 8px rgba(0,0,0,.25); z-index:1; white-space:nowrap; user-select:none;
         animation: floatSlow 18s ease-in-out infinite;
-      }
-      @keyframes floatSlow {
-        0%   { transform: translate(-50%,-50%) rotate(0deg); }
-        50%  { transform: translate(calc(-50% + 6px), calc(-50% - 6px)) rotate(3deg); }
-        100% { transform: translate(-50%,-50%) rotate(0deg); }
-      }
-      @media (prefers-reduced-motion: reduce) { #wm { animation:none; } }
+      }}
+      @keyframes floatSlow {{
+        0%, 100% {{ transform: translate(-50%,-50%) rotate(0deg); }}
+        50% {{ transform: translate(calc(-50% + 6px), calc(-50% - 6px)) rotate(3deg); }}
+      }}
+      @media (prefers-reduced-motion: reduce) {{ #wm {{ animation:none; }} }}
     </style>
     </head><body>
       <div id="stage">
-        <div id="tsp"></div>
-        <div id="wm" style="display: __WM_DISPLAY__;">__WM_TEXT__</div>
+        <div id="{container_id}"></div>
+        {'<div id="wm">' + _html.escape(wm) + '</div>' if show_watermark else ''}
       </div>
 
       <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
       <script>
-        (async () => {
+        (async () => {{
+          // Clear any existing instances to prevent accumulation
+          if (window.tsParticlesInstance) {{
+            window.tsParticlesInstance.destroy();
+          }}
+          
           const engine = window.tsParticles;
-          const PRESET = "__PRESET__";
-          const INTENSITY = __INTENSITY__;
+          const PRESET = "{preset}";
+          const INTENSITY = {json.dumps(float(intensity))};
 
           const palette = ["#a7f3d0","#93c5fd","#c4b5fd","#fde68a"];
-          let config = {
+          let config = {{
             detectRetina: true,
-            fullScreen: { enable: false },
-            background: { color: { value: "transparent" } },
+            fullScreen: {{ enable: false }},
+            background: {{ color: {{ value: "transparent" }} }},
             fpsLimit: 60,
-            particles: {},
-            interactivity: { events: { resize: true }, modes: {} }
-          };
+            particles: {{}},
+            interactivity: {{ events: {{ resize: true }}, modes: {{}} }}
+          }};
 
-          if (PRESET === "aurora") {
-            config.particles = {
-              number: { value: Math.round(18 * INTENSITY), density: { enable: true, area: 800 } },
-              color: { value: palette },
-              opacity: { value: 0.22 },
-              size: { value: { min: 1, max: 3 } },
-              move: {
+          if (PRESET === "aurora") {{
+            config.particles = {{
+              number: {{ value: Math.round(15 * INTENSITY), density: {{ enable: true, area: 800 }} }},
+              color: {{ value: palette }},
+              opacity: {{ value: 0.22 }},
+              size: {{ value: {{ min: 1, max: 3 }} }},
+              move: {{
                 enable: true,
-                speed: 0.55 * INTENSITY,
+                speed: 0.4 * INTENSITY,
                 random: true,
-                outModes: { default: "out" },
-                trail: { enable: true, length: Math.round(14 * INTENSITY), fill: { color: "transparent" } }
-              },
-              links: { enable: false }
-            };
-            config.interactivity.events.onHover = { enable: true, mode: "attract" };
-            config.interactivity.modes.attract = { distance: 160, duration: 0.4 };
-          } 
-          else if (PRESET === "constellation") {
-            config.particles = {
-              number: { value: Math.round(70 * INTENSITY), density: { enable: true, area: 800 } },
-              color: { value: "#e5f0ff" },
-              opacity: { value: { min: 0.15, max: 0.55 }, animation: { enable: true, speed: 0.6 } },
-              size: { value: { min: 1, max: 2.6 } },
-              move: { enable: true, speed: 0.45 * INTENSITY, outModes: { default: "out" } },
-              links: { enable: true, distance: 140, opacity: 0.18, color: "#bcd1ff" }
-            };
-            config.interactivity.events.onHover = { enable: true, mode: "repulse" };
-            config.interactivity.modes.repulse = { distance: 120, duration: 0.3 };
-          } 
-          else if (PRESET === "leaves") {
-            config.particles = {
-              number: { value: Math.round(22 * INTENSITY), density: { enable: true, area: 800 } },
-              color: { value: ["#8ee59b","#6ee7b7","#a3e635", "#86efac"] },
-              opacity: { value: 0.28 },
-              size: { value: { min: 6, max: 12 } },
-              shape: {
-                type: ["character","circle"],
-                options: { character: [{ value: "🍃", font: "Segoe UI Emoji" }] }
-              },
-              move: {
+                straight: false,
+                outModes: {{ default: "out" }},
+                trail: {{ enable: true, length: Math.round(10 * INTENSITY), fill: {{ color: "transparent" }} }}
+              }},
+              links: {{ enable: false }}
+            }};
+            config.interactivity.events.onHover = {{ enable: false }};
+          }} 
+          else if (PRESET === "constellation") {{
+            config.particles = {{
+              number: {{ value: Math.round(50 * INTENSITY), density: {{ enable: true, area: 800 }} }},
+              color: {{ value: "#e5f0ff" }},
+              opacity: {{ value: {{ min: 0.15, max: 0.55 }}, animation: {{ enable: true, speed: 0.5, sync: false }} }},
+              size: {{ value: {{ min: 1, max: 2.5 }} }},
+              move: {{ 
+                enable: true, 
+                speed: 0.3 * INTENSITY, 
+                direction: "none",
+                random: false,
+                straight: false,
+                outModes: {{ default: "out" }} 
+              }},
+              links: {{ 
+                enable: true, 
+                distance: 140, 
+                opacity: 0.18, 
+                color: "#bcd1ff",
+                width: 1
+              }}
+            }};
+            config.interactivity.events.onHover = {{ enable: false }};
+          }} 
+          else if (PRESET === "leaves") {{
+            config.particles = {{
+              number: {{ value: Math.round(18 * INTENSITY), density: {{ enable: true, area: 800 }} }},
+              color: {{ value: ["#8ee59b","#6ee7b7","#a3e635", "#86efac"] }},
+              opacity: {{ value: 0.35 }},
+              size: {{ value: {{ min: 8, max: 14 }} }},
+              shape: {{
+                type: ["character"],
+                options: {{ character: [{{ value: "🍃", font: "Segoe UI Emoji" }}] }}
+              }},
+              move: {{
                 enable: true,
-                speed: 0.35 * INTENSITY,
-                direction: "bottom",
-                outModes: { default: "out" },
-                drift: 0.6,
-                angle: { offset: 20, value: 40 }
-              },
-              rotate: { value: { min: 0, max: 360 }, animation: { enable: true, speed: 6 } },
-              links: { enable: false }
-            };
-          }
+                speed: 0.8 * INTENSITY,
+                direction: "bottom-right",
+                random: false,
+                straight: false,
+                outModes: {{ default: "out" }},
+                gravity: {{ enable: true, acceleration: 0.5 }}
+              }},
+              rotate: {{ 
+                value: {{ min: 0, max: 360 }}, 
+                direction: "random",
+                animation: {{ enable: true, speed: 5, sync: false }} 
+              }},
+              wobble: {{ enable: true, distance: 10, speed: 10 }},
+              links: {{ enable: false }}
+            }};
+          }}
 
-          await engine.load("tsp", config);
-        })();
+          // Store instance globally for cleanup
+          window.tsParticlesInstance = await engine.load("{container_id}", config);
+        }})();
       </script>
     </body></html>
     """
 
-    _html_iframe(
-        html_code
-          .replace("__PRESET__", preset)
-          .replace("__INTENSITY__", json.dumps(float(intensity)))
-          .replace("__WM_TEXT__", (wm if show_watermark else ""))
-          .replace("__WM_DISPLAY__", "block" if show_watermark else "none")
-          .replace("__WM_OPACITY__", str(watermark_opacity))
-          .replace("__FONT__", font_css),
-        height=height,
-        scrolling=False,
-    )
+    _html_iframe(html_code, height=height, scrolling=False)
+
 
 # =========================================================
-# Wikipedia image resolver (cached)
+# Improved Plant Image Service with multiple sources
 # =========================================================
 @st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def get_plant_image_from_pexels(plant_name: str) -> Optional[Dict[str, str]]:
+    """Try to get plant image from Pexels API (requires API key in secrets)"""
+    try:
+        # Check if Pexels API key is available
+        if "PEXELS_API_KEY" in st.secrets:
+            headers = {"Authorization": st.secrets["PEXELS_API_KEY"]}
+            response = requests.get(
+                f"https://api.pexels.com/v1/search?query={quote(plant_name + ' plant')}&per_page=1",
+                headers=headers,
+                timeout=5
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("photos"):
+                    photo = data["photos"][0]
+                    return {
+                        "url": photo["src"]["large"],
+                        "caption": f"Photo by {photo['photographer']} on Pexels",
+                        "page_url": photo["url"]
+                    }
+    except:
+        pass
+    return None
+
+
+@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def get_plant_image_from_gbif(plant_name: str) -> Optional[Dict[str, str]]:
+    """Try to get plant image from GBIF (Global Biodiversity Information Facility)"""
+    try:
+        # Search for species
+        search_response = requests.get(
+            f"https://api.gbif.org/v1/species/match?name={quote(plant_name)}",
+            timeout=5
+        )
+        if search_response.status_code == 200:
+            species_data = search_response.json()
+            if species_data.get("usageKey"):
+                # Get media for this species
+                media_response = requests.get(
+                    f"https://api.gbif.org/v1/species/{species_data['usageKey']}/media",
+                    timeout=5
+                )
+                if media_response.status_code == 200:
+                    media_data = media_response.json()
+                    results = media_data.get("results", [])
+                    # Filter for images
+                    images = [r for r in results if r.get("type") == "StillImage" and r.get("identifier")]
+                    if images:
+                        img = images[0]
+                        return {
+                            "url": img["identifier"],
+                            "caption": f"Source: GBIF - {species_data.get('scientificName', plant_name)}",
+                            "page_url": f"https://www.gbif.org/species/{species_data['usageKey']}"
+                        }
+    except:
+        pass
+    return None
+
+
+@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def get_plant_image_from_wikipedia(plant_name: str) -> Optional[Dict[str, str]]:
+    """Enhanced Wikipedia image search"""
+    try:
+        # Try direct title
+        title = _normalize_plant_title(plant_name)
+        js = _wiki_summary(title)
+        
+        # If not found, search with better query
+        if not js:
+            # Search specifically in plant categories
+            search_response = requests.get(
+                "https://en.wikipedia.org/w/api.php",
+                params={
+                    "action": "query",
+                    "list": "search",
+                    "srsearch": f'{plant_name} (plant OR flower OR tree OR shrub)',
+                    "utf8": 1,
+                    "format": "json",
+                    "srlimit": 10,
+                },
+                timeout=6,
+            )
+            if search_response.status_code == 200:
+                hits = search_response.json().get("query", {}).get("search", [])
+                for hit in hits:
+                    js = _wiki_summary(hit["title"])
+                    if js and (js.get("thumbnail") or js.get("originalimage")):
+                        break
+
+        if js:
+            img = (js.get("thumbnail") or {}).get("source") or (js.get("originalimage") or {}).get("source")
+            if img:
+                page = (js.get("content_urls") or {}).get("desktop", {}).get("page")
+                return {"url": img, "caption": f"Wikipedia: {js.get('title')}", "page_url": page}
+    except:
+        pass
+    return None
+
+
+@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def get_plant_image_from_unsplash(plant_name: str) -> Dict[str, str]:
+    """Get a relevant plant image from Unsplash using their public CDN"""
+    # Use a deterministic seed based on plant name for consistency
+    seed = hashlib.md5(plant_name.encode()).hexdigest()[:10]
+    
+    # Unsplash public CDN with search terms
+    search_terms = quote(f"{plant_name},plant,botanical,nature")
+    
+    return {
+        "url": f"https://source.unsplash.com/800x600/?{search_terms}",
+        "caption": f"Plant image for {plant_name}",
+        "page_url": None
+    }
+
+
 def _wiki_summary(title: str) -> Optional[dict]:
     try:
         r = requests.get(
@@ -282,77 +414,76 @@ def _wiki_summary(title: str) -> Optional[dict]:
     return None
 
 
-@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
-def _wiki_search(query: str) -> Optional[str]:
-    try:
-        r = requests.get(
-            "https://en.wikipedia.org/w/api.php",
-            params={
-                "action": "query",
-                "list": "search",
-                "srsearch": f'{query} incategory:"Plants" OR incategory:"Flora"',
-                "utf8": 1,
-                "format": "json",
-                "srlimit": 5,
-            },
-            timeout=6,
-        )
-    except Exception:
-        return None
-    if r.status_code != 200:
-        return None
-    hits = r.json().get("query", {}).get("search", [])
-    return hits[0]["title"] if hits else None
-
-
 def _normalize_plant_title(name: str) -> str:
+    """Normalize common plant names to scientific names for better Wikipedia matches"""
     key = name.strip().lower()
     return {
         "tulip tree": "Liriodendron tulipifera",
         "yellow poplar": "Liriodendron tulipifera",
         "snake plant": "Dracaena trifasciata",
+        "mother-in-law's tongue": "Dracaena trifasciata",
         "spider plant": "Chlorophytum comosum",
         "pothos": "Epipremnum aureum",
+        "devil's ivy": "Epipremnum aureum",
         "money plant": "Epipremnum aureum",
         "peace lily": "Spathiphyllum",
         "rubber plant": "Ficus elastica",
         "rubber tree": "Ficus elastica",
-        "zz plant": "Zamioculcas",
+        "zz plant": "Zamioculcas zamiifolia",
+        "monstera": "Monstera deliciosa",
+        "swiss cheese plant": "Monstera deliciosa",
+        "fiddle leaf fig": "Ficus lyrata",
+        "aloe": "Aloe vera",
+        "jade plant": "Crassula ovata",
+        "money tree": "Pachira aquatica",
+        "bird of paradise": "Strelitzia",
+        "boston fern": "Nephrolepis exaltata",
+        "english ivy": "Hedera helix",
+        "philodendron": "Philodendron hederaceum",
     }.get(key, name.strip())
 
 
 @st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
 def get_plant_image_info(plant_name: str) -> Dict[str, Optional[str]]:
-    title = _normalize_plant_title(plant_name)
-    js = _wiki_summary(title)
-    if not js:
-        found = _wiki_search(title)
-        if found:
-            js = _wiki_summary(found)
+    """
+    Enhanced image fetching with multiple sources and better fallbacks.
+    Tries multiple sources in order of preference.
+    """
+    # Try multiple sources in order
+    
+    # 1. Try Pexels first (high quality images)
+    result = get_plant_image_from_pexels(plant_name)
+    if result and result.get("url"):
+        return result
+    
+    # 2. Try GBIF (scientific database)
+    result = get_plant_image_from_gbif(plant_name)
+    if result and result.get("url"):
+        return result
+    
+    # 3. Try Wikipedia (good for common plants)
+    result = get_plant_image_from_wikipedia(plant_name)
+    if result and result.get("url"):
+        return result
+    
+    # 4. Use Unsplash as final fallback (always returns something)
+    return get_plant_image_from_unsplash(plant_name)
 
-    if js:
-        img = (js.get("thumbnail") or {}).get("source") or (js.get("originalimage") or {}).get("source")
-        if img:
-            page = (js.get("content_urls") or {}).get("desktop", {}).get("page")
-            return {"url": img, "caption": f"🔗 Wikipedia: {js.get('title')}", "page_url": page}
 
-    seed = quote(plant_name.lower())
-    return {"url": f"https://picsum.photos/seed/{seed}/800/600", "caption": "Placeholder image", "page_url": None}
-
-
-def get_plant_image_url(plant_name: str) -> str:  # backward compatibility
+def get_plant_image_url(plant_name: str) -> str:
+    """Backward compatibility helper"""
     return get_plant_image_info(plant_name)["url"]
 
 
 # =========================================================
-# Quick facts (lightweight heuristics)
+# Quick facts extraction
 # =========================================================
 def extract_quick_facts(analysis: str) -> Dict[str, str]:
     facts: Dict[str, str] = {}
     lower = analysis.lower()
 
     if "toxic" in lower:
-        facts["Safety"] = "Pet Safe ✅" if any(t in lower for t in ["not toxic", "non-toxic", "non toxic"]) else "Toxic ⚠️"
+        facts["Safety"] = "Pet Safe ✅" if any(t in lower for t in ["not toxic", "non-toxic", "non toxic", "safe for pets"]) else "Toxic ⚠️"
 
     for k, v in {
         "full sun": "☀️ Full Sun",
@@ -379,7 +510,7 @@ def extract_quick_facts(analysis: str) -> Dict[str, str]:
 
 
 # =========================================================
-# Main renderer — VERBATIM right pane
+# Main renderer with support for uploaded images
 # =========================================================
 def render_plant_analysis_display(
     plant_name: str,
@@ -388,15 +519,19 @@ def render_plant_analysis_display(
     particles: bool = True,
     floating_leaf: bool = True,
     typewriter_subtitle: bool = True,
-    allow_model_html: bool = True,   # set True if you trust model HTML
-    show_header: bool = False,       # <-- default False to avoid duplicate header
+    allow_model_html: bool = True,
+    show_header: bool = False,
+    uploaded_image_bytes: Optional[bytes] = None,  # New parameter for uploaded/captured images
 ) -> None:
     """
     Left: image + quick facts (+ optional audio).
     Right: show LLM output exactly as provided.
+    
+    Args:
+        uploaded_image_bytes: If provided, use this image instead of searching for one
     """
-    # Optional background particles (safe to call multiple times; draws in an iframe)
-    render_particles(enabled=particles)
+    # Optional background particles
+    render_particles(enabled=particles, preset="leaves", intensity=1.0)
 
     # Only render the big gradient header if explicitly requested
     if show_header:
@@ -407,13 +542,17 @@ def render_plant_analysis_display(
     left, right = st.columns([2, 3], gap="large")
 
     with left:
-        img = get_plant_image_info(plant_name)
-        cap = f"🌿 {plant_name}"
-        if img.get("page_url"):
-            cap += f" • [{img['caption']}]({img['page_url']})"
+        # Use uploaded image if provided, otherwise search for one
+        if uploaded_image_bytes:
+            st.image(uploaded_image_bytes, caption=f"🌿 {plant_name} - User's Image", use_container_width=True)
         else:
-            cap += f" • {img['caption']}"
-        st.image(img["url"], caption=cap, use_container_width=True)
+            img = get_plant_image_info(plant_name)
+            cap = f"🌿 {plant_name}"
+            if img.get("page_url"):
+                cap += f" • [{img['caption']}]({img['page_url']})"
+            else:
+                cap += f" • {img['caption']}"
+            st.image(img["url"], caption=cap, use_container_width=True)
 
         st.markdown("#### ⭐ Quick Facts")
         facts = extract_quick_facts(analysis)
@@ -437,10 +576,9 @@ def render_plant_analysis_display(
     with right:
         st.markdown("#### 📋 Detailed Information")
         if allow_model_html:
-            st.markdown(analysis, unsafe_allow_html=True)  # raw HTML allowed
+            st.markdown(analysis, unsafe_allow_html=True)
         else:
-            st.markdown(analysis)  # Markdown only (safer)
-
+            st.markdown(analysis)
 
 
 # =========================================================
@@ -455,7 +593,7 @@ def render_legal_footer() -> None:
         """
         <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
              background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
-          <div>🌿 Plant Facts Explorer • Version 5.1.0</div>
+          <div>🌿 Plant Facts Explorer • Version 5.2.0</div>
           <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
         </div>
         """

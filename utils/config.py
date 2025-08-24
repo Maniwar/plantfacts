@@ -10,7 +10,7 @@ class AppConfig:
     # App Settings
     PAGE_TITLE = "Plant Facts Explorer"
     PAGE_ICON = "🌿"
-    APP_VERSION = "2.1.0"  # Updated: Fixed streaming and caching
+    APP_VERSION = "2.6.0"  # Updated: Fixed particles speed issue, improved image search, fixed upload/capture image display
     AUTHOR = "Maniwar"
     
     # Input Methods
