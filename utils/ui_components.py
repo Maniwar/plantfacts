@@ -334,6 +334,19 @@ def render_plant_analysis_display(
 def render_custom_css() -> None:
     load_custom_css()
 
+render_custom_css()
+
+render_plant_analysis_display(
+    plant_name=query,
+    analysis=analysis_text_from_llm,
+    mute_audio=st.session_state.get("mute_audio", True),
+    particles=True,                 # optional
+    floating_leaf=True,             # keep the leaf
+    typewriter_subtitle=True,       # keep the typewriter effect
+    allow_model_html=False          # set True if your model emits safe HTML you want rendered
+)
+
+render_legal_footer()
 
 def render_legal_footer() -> None:
     st.html(
