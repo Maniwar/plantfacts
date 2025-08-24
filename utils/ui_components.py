@@ -126,6 +126,7 @@ def render_particles(
     Background visuals:
       • Linked dot particles (optional)
       • One large, subtle watermark with the PLANT NAME (HTML/CSS, always visible)
+    Re-renders per plant via a unique component key.
     """
     if not enabled:
         return
@@ -133,8 +134,7 @@ def render_particles(
     import json
     from streamlit.components.v1 import html as _html_iframe
 
-    label = (plant_name or "Plant").strip()  # <– uses the real plant_name if passed
-
+    label = (plant_name or "Plant").strip()
     dot_count = 34 if show_dots else 0
 
     html_code = """
@@ -169,7 +169,7 @@ def render_particles(
       <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
       <script>
         (async () => {
-          // Set watermark text
+          // Set watermark text from Python
           document.getElementById("wm").textContent = __LABEL__;
 
           const DOT_COUNT = __DOT_COUNT__;
@@ -197,12 +197,14 @@ def render_particles(
 
     _html_iframe(
         html_code
-        .replace("__LABEL__", json.dumps(label))   # plant name goes here
+        .replace("__LABEL__", json.dumps(label))
         .replace("__DOT_COUNT__", str(dot_count))
         .replace("__OPACITY__", str(opacity)),
         height=height,
         scrolling=False,
+        key=f"particles-{hash(label) & 0xfffffff}",  # <-- forces re-render per plant
     )
+
 
 
 # =========================================================
