@@ -1,397 +1,726 @@
 """
-UI Components Module - Simplified Version
-Clean, minimal UI components without animations and visual clutter
-Author: Maniwar (Simplified)
-Version: 2.0.0
+UI Components Module
+Verbatim LLM rendering + animations (leaf, sheen, typewriter), reliable images
+Author: Maniwar
+Version: 8.1.0 - Enhanced search support
 """
 
-import streamlit as st
-import requests
-import hashlib
+from __future__ import annotations
+
+import html as _html
+import re
+from io import BytesIO
 from typing import Dict, Optional
 from urllib.parse import quote
-import html as _html
+import hashlib
 
-def apply_clean_theme():
-    """Apply a clean, minimal theme to the app"""
-    st.markdown("""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        /* Base styling */
-        .stApp {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #ffffff;
-        }
-        
-        /* Hide Streamlit defaults */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        .stDeployButton {display: none;}
-        
-        /* Clean containers */
-        .main-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-        
-        /* Card components */
-        .card {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 1.5rem;
+import requests
+import streamlit as st
+import streamlit.components.v1 as components
+from gtts import gTTS
+
+
+# =========================================================
+# Global CSS with mobile optimization
+# =========================================================
+def load_custom_css() -> None:
+    st.html(
+        """
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap');
+
+          :root {
+            --grad-1:#667eea; --grad-2:#764ba2;
+            --panel-radius:20px;
+          }
+
+          .stApp { font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+          /* Header - Mobile Optimized */
+          .header {
+            position:relative; overflow:hidden;
+            background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 100%);
+            padding: 1.2rem 1rem; 
+            border-radius: var(--panel-radius);
+            color:#fff; 
+            box-shadow:0 16px 36px rgba(0,0,0,.15); 
             margin-bottom: 1rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .card-header {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #f3f4f6;
-        }
-        
-        /* Status indicators */
-        .status-badge {
+            min-height: auto;
+          }
+          
+          @media (min-width: 769px) {
+            .header {
+              padding: 2rem 1.5rem;
+            }
+          }
+          
+          .sheen { 
+            position:absolute; top:-50%; right:-10%; width:60%; height:200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+            animation: shimmer 3.5s ease-in-out infinite; 
+            pointer-events:none; 
+          }
+          
+          .title-row { 
+            display:flex; 
+            align-items:center; 
+            gap:.5rem; 
+            flex-wrap: nowrap;
+          }
+          
+          .leaf { 
+            font-size:1.8rem; 
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,.25));
+            animation: float 4.5s ease-in-out infinite; 
+            flex-shrink: 0;
+          }
+          
+          .headline { 
+            font-family:'Space Grotesk', sans-serif; 
+            font-size: clamp(1.3rem, 5vw, 2rem); 
+            font-weight:700; 
+            line-height:1.1; 
+            margin:0;
+            word-break: break-word;
+          }
+
+          /* Subtitle - Responsive with different text */
+          .subtitle-wrapper { 
+            margin:.45rem 0 0 0; 
+          }
+          
+          .subtitle-desktop, .subtitle-mobile {
+            font-size: clamp(0.85rem, 3vw, 1rem);
+            opacity: 0.95;
+            line-height: 1.4;
+            color: rgba(255, 255, 255, 0.95);
+          }
+          
+          /* Show desktop subtitle with typewriter on larger screens */
+          .subtitle-desktop {
+            display: none;
+          }
+          
+          @media (min-width: 769px) {
+            .subtitle-desktop {
+              display: inline-block;
+              overflow: hidden;
+              white-space: nowrap;
+              border-right: .12em solid rgba(255,255,255,.85);
+              animation: typing 3s steps(40,end), blink .85s step-end infinite;
+              max-width: 100%;
+            }
+            .subtitle-mobile {
+              display: none;
+            }
+          }
+          
+          /* Show mobile subtitle with wrapping on small screens */
+          .subtitle-mobile {
+            display: block;
+            white-space: normal;
+            animation: fadeIn 1s ease-out;
+          }
+          
+          @media (min-width: 769px) {
+            .subtitle-mobile {
+              display: none;
+            }
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 0.95; transform: translateY(0); }
+          }
+
+          .bar-title {
+            background:linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 100%);
+            color:#fff; 
+            font-weight:700; 
+            padding:.8rem 1rem; 
+            border-radius:12px;
+            display:flex; 
+            align-items:center; 
+            gap:.6rem; 
+            margin-top:.3rem;
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+          }
+
+          .stImage { 
+            border-radius:14px; 
+            box-shadow:0 8px 24px rgba(0,0,0,.12); 
+          }
+          
+          /* Streaming content animation */
+          .streaming-content {
+            animation: fadeInUp 0.3s ease-out;
+          }
+          
+          @keyframes fadeInUp {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          
+          .typing-cursor {
             display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        
-        .status-success {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .status-warning {
-            background: #fed7aa;
-            color: #92400e;
-        }
-        
-        .status-info {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-        
-        /* Buttons */
-        .stButton > button {
-            background: #059669;
-            color: white;
-            border: none;
-            padding: 0.5rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: background 0.2s;
-        }
-        
-        .stButton > button:hover {
-            background: #047857;
-        }
-        
-        /* Info sections */
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-        
-        .info-item {
-            padding: 1rem;
-            background: #f9fafb;
-            border-radius: 6px;
-        }
-        
-        .info-label {
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-bottom: 0.25rem;
-        }
-        
-        .info-value {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: #111827;
-        }
-        
-        /* Reduce spacing */
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            max-width: 900px;
-        }
-        
-        /* Clean headers */
-        h1 {
-            color: #111827;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-        
-        h2 {
-            color: #059669;
-            font-weight: 600;
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        h3 {
-            color: #374151;
-            font-weight: 600;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        /* Text content */
-        p {
-            line-height: 1.6;
-            color: #4b5563;
-        }
-        
-        /* Lists */
-        ul, ol {
-            line-height: 1.8;
-            color: #4b5563;
-        }
-        
-        /* Code blocks */
-        code {
-            background: #f3f4f6;
-            padding: 0.125rem 0.25rem;
-            border-radius: 3px;
-            font-size: 0.875rem;
-        }
-        
-        /* Streamlit specific overrides */
-        .stSelectbox > div > div {
-            background: white;
-            border: 1px solid #e5e7eb;
-        }
-        
-        .stTextInput > div > div {
-            background: white;
-            border: 1px solid #e5e7eb;
-        }
-        
-        /* Success/Error messages */
-        .stAlert {
-            border-radius: 6px;
-        }
-        
-        /* Metrics */
-        [data-testid="metric-container"] {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            padding: 1rem;
-            border-radius: 6px;
-        }
-        
-        [data-testid="metric-container"] [data-testid="stMetricLabel"] {
-            color: #6b7280;
-            font-size: 0.875rem;
-        }
-        
-        [data-testid="metric-container"] [data-testid="stMetricValue"] {
-            color: #059669;
-            font-weight: 600;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+            width: 3px;
+            height: 1.2em;
+            background: var(--grad-2);
+            animation: cursor-blink 1s infinite;
+            margin-left: 2px;
+            vertical-align: text-bottom;
+          }
+          
+          @keyframes cursor-blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+          }
+
+          /* Animations */
+          @keyframes shimmer { 
+            0%,100%{transform:translateX(0)} 
+            50%{transform:translateX(18px)} 
+          }
+          
+          @keyframes float { 
+            0%,100%{transform:translateY(0) rotate(0deg)} 
+            50%{transform:translateY(-10px) rotate(6deg)} 
+          }
+          
+          @keyframes typing { 
+            from{ width:0 } 
+            to{ width:100% } 
+          }
+          
+          @keyframes blink { 
+            from, to { border-color: transparent } 
+            50% { border-color: rgba(255,255,255,.85) } 
+          }
+
+          /* Mobile-specific adjustments */
+          @media (max-width: 768px) {
+            .header {
+              padding: 1rem 0.8rem;
+            }
+            
+            .title-row {
+              gap: 0.3rem;
+            }
+            
+            .leaf {
+              font-size: 1.4rem;
+            }
+            
+            .headline {
+              font-size: 1.4rem !important;
+            }
+            
+            .subtitle-wrapper {
+              margin-top: 0.25rem;
+            }
+            
+            .subtitle-mobile {
+              font-size: 0.9rem !important;
+            }
+          }
+
+          /* Respect reduced motion */
+          @media (prefers-reduced-motion: reduce) {
+            .sheen, .leaf, .typewriter, .streaming-content, .typing-cursor { 
+              animation: none !important; 
+            }
+            .typewriter {
+              border-right: none;
+            }
+          }
+
+          /* Tidy default spacing from model text */
+          .stMarkdown ul { margin:.3rem 0 .6rem 1rem; }
+          .stMarkdown p:empty { display:none!important; }
+        </style>
+        """
+    )
 
 
-def render_simple_header(title: str = "Plant Facts Explorer", 
-                        subtitle: str = "AI-powered plant identification and care guide"):
-    """Render a simple, clean header without animations"""
-    st.markdown(f"""
-    <div style="text-align: center; padding: 2rem 0; margin-bottom: 2rem;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">🌿 {_html.escape(title)}</h1>
-        <p style="color: #6b7280; font-size: 1.1rem;">{_html.escape(subtitle)}</p>
-    </div>
-    """, unsafe_allow_html=True)
+def render_header(
+    subtitle: str = "Discover the amazing world of plants with AI-powered insights",
+    subtitle_mobile: str = "AI-powered plant care guide",
+    show_leaf: bool = True,
+) -> None:
+    """Render header with mobile-optimized layout"""
+    leaf = '<span class="leaf">🌿</span>' if show_leaf else ""
+    st.html(
+        f"""
+        <div class="header">
+          <div class="sheen"></div>
+          <div class="title-row">
+            {leaf}
+            <div class="headline">Plant Facts Explorer</div>
+          </div>
+          <div class="subtitle-wrapper">
+            <div class="subtitle-desktop">{_html.escape(subtitle)}</div>
+            <div class="subtitle-mobile">{_html.escape(subtitle_mobile)}</div>
+          </div>
+        </div>
+        """
+    )
 
 
-def render_info_card(title: str, content: str, icon: str = "ℹ️"):
-    """Render a clean information card"""
-    st.markdown(f"""
-    <div class="card">
-        <div class="card-header">{icon} {_html.escape(title)}</div>
-        <div>{content}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-def render_status_badge(text: str, status: str = "info"):
-    """Render a status badge
-    
-    Args:
-        text: Badge text
-        status: One of 'success', 'warning', 'info'
+# =========================================================
+# Subtle, elegant particle effect
+# =========================================================
+def render_particles(
+    enabled: bool = True,
+    height: int = 100,
+) -> None:
     """
-    status_class = f"status-{status}"
-    st.markdown(f"""
-    <span class="status-badge {status_class}">{_html.escape(text)}</span>
-    """, unsafe_allow_html=True)
-
-
-def render_quick_facts(facts: Dict[str, str]):
-    """Render quick facts in a clean grid"""
-    if not facts:
+    Subtle, elegant particle effect - just gentle floating dots
+    Much more refined and less distracting
+    """
+    if not enabled:
         return
+
+    from streamlit.components.v1 import html as _html_iframe
     
-    cols = st.columns(min(len(facts), 3))
-    for i, (label, value) in enumerate(facts.items()):
-        with cols[i % len(cols)]:
-            st.metric(label=label, value=value)
+    # Very subtle, minimal particle effect
+    html_code = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                margin: 0; 
+                padding: 0; 
+                overflow: hidden; 
+                background: transparent;
+                height: 100vh;
+                position: relative;
+            }
+            
+            .particle-container {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+            
+            /* Subtle floating dots */
+            .dot {
+                position: absolute;
+                width: 3px;
+                height: 3px;
+                background: rgba(102, 126, 234, 0.15);
+                border-radius: 50%;
+                animation: gentle-float 20s infinite ease-in-out;
+            }
+            
+            .dot:nth-child(1) {
+                left: 10%;
+                animation-duration: 19s;
+                animation-delay: 0s;
+            }
+            
+            .dot:nth-child(2) {
+                left: 20%;
+                animation-duration: 21s;
+                animation-delay: 3s;
+            }
+            
+            .dot:nth-child(3) {
+                left: 35%;
+                animation-duration: 18s;
+                animation-delay: 2s;
+            }
+            
+            .dot:nth-child(4) {
+                left: 50%;
+                animation-duration: 22s;
+                animation-delay: 5s;
+            }
+            
+            .dot:nth-child(5) {
+                left: 65%;
+                animation-duration: 20s;
+                animation-delay: 1s;
+            }
+            
+            .dot:nth-child(6) {
+                left: 80%;
+                animation-duration: 23s;
+                animation-delay: 4s;
+            }
+            
+            .dot:nth-child(7) {
+                left: 90%;
+                animation-duration: 19s;
+                animation-delay: 6s;
+            }
+            
+            /* Very gentle floating animation */
+            @keyframes gentle-float {
+                0%, 100% {
+                    transform: translateY(100vh) translateX(0);
+                    opacity: 0;
+                }
+                10% {
+                    opacity: 0.3;
+                }
+                90% {
+                    opacity: 0.3;
+                }
+                100% {
+                    transform: translateY(-20px) translateX(10px);
+                    opacity: 0;
+                }
+            }
+            
+            /* Reduced motion support */
+            @media (prefers-reduced-motion: reduce) {
+                .dot {
+                    animation: none;
+                    opacity: 0.1;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="particle-container">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    _html_iframe(html_code, height=height, scrolling=False)
 
 
-def display_plant_card(plant_name: str, 
-                       image_url: str, 
-                       quick_facts: Dict[str, str],
-                       description: str = None):
-    """Display a clean plant information card"""
-    
-    st.markdown(f"""
-    <div class="card">
-        <h2 style="color: #059669; margin-top: 0;">🌱 {_html.escape(plant_name)}</h2>
+# =========================================================
+# Streaming content with typewriter effect
+# =========================================================
+def render_streaming_content(content: str, container) -> None:
+    """
+    Render streaming content with typewriter-like animation
+    """
+    # Add a cursor at the end for typewriter effect
+    html_content = f"""
+    <div class="streaming-content">
+        <div style="white-space: pre-wrap; font-family: inherit;">
+            {_html.escape(content)}<span class="typing-cursor"></span>
+        </div>
     </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.image(image_url, caption=plant_name, use_container_width=True)
-    
-    with col2:
-        st.markdown("### Quick Facts")
-        if quick_facts:
-            for label, value in quick_facts.items():
-                st.markdown(f"""
-                <div class="info-item">
-                    <div class="info-label">{_html.escape(label)}</div>
-                    <div class="info-value">{_html.escape(value)}</div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("No quick facts available")
-    
-    if description:
-        st.markdown("### Description")
-        st.markdown(description)
+    """
+    container.markdown(html_content, unsafe_allow_html=True)
 
 
-def render_search_suggestions(suggestions: list, max_display: int = 5):
-    """Render search suggestions as clickable chips"""
-    if not suggestions:
-        return None
-    
-    suggestions = suggestions[:max_display]
-    
-    st.markdown("**Suggestions:**")
-    cols = st.columns(len(suggestions))
-    
-    selected = None
-    for i, suggestion in enumerate(suggestions):
-        with cols[i]:
-            if st.button(suggestion, key=f"sugg_{i}", use_container_width=True):
-                selected = suggestion
-    
-    return selected
-
-
-def create_loading_placeholder(message: str = "Loading..."):
-    """Create a clean loading placeholder"""
-    return st.empty().info(f"⏳ {message}")
-
-
-def render_error_message(message: str):
-    """Render a clean error message"""
-    st.error(f"❌ {message}")
-
-
-def render_success_message(message: str):
-    """Render a clean success message"""
-    st.success(f"✅ {message}")
-
-
-def render_info_message(message: str):
-    """Render a clean info message"""
-    st.info(f"ℹ️ {message}")
-
-
-# Simplified image fetching (keep existing logic but simplify)
+# =========================================================
+# Improved Plant Image Service with multiple sources
+# =========================================================
 @st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
-def get_plant_image_simple(plant_name: str) -> str:
-    """Get a plant image URL with fallback to placeholder"""
-    
-    # Try Wikipedia first (fastest and most reliable)
+def get_plant_image_from_pexels(plant_name: str) -> Optional[Dict[str, str]]:
+    """Try to get plant image from Pexels API (requires API key in secrets)"""
     try:
-        search_name = plant_name.replace(" ", "_")
-        response = requests.get(
-            f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(search_name)}",
-            timeout=3
-        )
-        if response.status_code == 200:
-            data = response.json()
-            if "thumbnail" in data:
-                return data["thumbnail"]["source"]
+        if "PEXELS_API_KEY" in st.secrets:
+            headers = {"Authorization": st.secrets["PEXELS_API_KEY"]}
+            response = requests.get(
+                f"https://api.pexels.com/v1/search?query={quote(plant_name + ' plant')}&per_page=1",
+                headers=headers,
+                timeout=5
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("photos"):
+                    photo = data["photos"][0]
+                    return {
+                        "url": photo["src"]["large"],
+                        "caption": f"Photo by {photo['photographer']} on Pexels",
+                        "page_url": photo["url"]
+                    }
     except:
         pass
-    
-    # Fallback to Unsplash
-    search_terms = quote(f"{plant_name},plant,botanical")
-    return f"https://source.unsplash.com/800x600/?{search_terms}"
+    return None
 
 
-def extract_quick_facts_simple(analysis: str) -> Dict[str, str]:
-    """Extract key facts from analysis text (simplified)"""
-    facts = {}
-    lower_text = analysis.lower()
+@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def get_plant_image_from_gbif(plant_name: str) -> Optional[Dict[str, str]]:
+    """Try to get plant image from GBIF (Global Biodiversity Information Facility)"""
+    try:
+        search_response = requests.get(
+            f"https://api.gbif.org/v1/species/match?name={quote(plant_name)}",
+            timeout=5
+        )
+        if search_response.status_code == 200:
+            species_data = search_response.json()
+            if species_data.get("usageKey"):
+                media_response = requests.get(
+                    f"https://api.gbif.org/v1/species/{species_data['usageKey']}/media",
+                    timeout=5
+                )
+                if media_response.status_code == 200:
+                    media_data = media_response.json()
+                    results = media_data.get("results", [])
+                    images = [r for r in results if r.get("type") == "StillImage" and r.get("identifier")]
+                    if images:
+                        img = images[0]
+                        return {
+                            "url": img["identifier"],
+                            "caption": f"Source: GBIF - {species_data.get('scientificName', plant_name)}",
+                            "page_url": f"https://www.gbif.org/species/{species_data['usageKey']}"
+                        }
+    except:
+        pass
+    return None
+
+
+@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def get_plant_image_from_wikipedia(plant_name: str) -> Optional[Dict[str, str]]:
+    """Enhanced Wikipedia image search"""
+    try:
+        title = _normalize_plant_title(plant_name)
+        js = _wiki_summary(title)
+        
+        if not js:
+            search_response = requests.get(
+                "https://en.wikipedia.org/w/api.php",
+                params={
+                    "action": "query",
+                    "list": "search",
+                    "srsearch": f'{plant_name} (plant OR flower OR tree OR shrub)',
+                    "utf8": 1,
+                    "format": "json",
+                    "srlimit": 10,
+                },
+                timeout=6,
+            )
+            if search_response.status_code == 200:
+                hits = search_response.json().get("query", {}).get("search", [])
+                for hit in hits:
+                    js = _wiki_summary(hit["title"])
+                    if js and (js.get("thumbnail") or js.get("originalimage")):
+                        break
+
+        if js:
+            img = (js.get("thumbnail") or {}).get("source") or (js.get("originalimage") or {}).get("source")
+            if img:
+                page = (js.get("content_urls") or {}).get("desktop", {}).get("page")
+                return {"url": img, "caption": f"Wikipedia: {js.get('title')}", "page_url": page}
+    except:
+        pass
+    return None
+
+
+@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def get_plant_image_from_unsplash(plant_name: str) -> Dict[str, str]:
+    """Get a relevant plant image from Unsplash using their public CDN"""
+    seed = hashlib.md5(plant_name.encode()).hexdigest()[:10]
+    search_terms = quote(f"{plant_name},plant,botanical,nature")
     
-    # Safety check
-    if "toxic" in lower_text:
-        if any(word in lower_text for word in ["non-toxic", "not toxic", "safe"]):
-            facts["Safety"] = "Pet Safe ✅"
-        else:
-            facts["Toxicity"] = "Toxic ⚠️"
-    
-    # Light requirements
-    light_conditions = {
-        "full sun": "Full Sun ☀️",
-        "partial shade": "Partial Shade ⛅",
-        "bright indirect": "Bright Indirect 💡",
-        "low light": "Low Light 🔅"
+    return {
+        "url": f"https://source.unsplash.com/800x600/?{search_terms}",
+        "caption": f"Plant image for {plant_name}",
+        "page_url": None
     }
+
+
+def _wiki_summary(title: str) -> Optional[dict]:
+    try:
+        r = requests.get(
+            f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(title)}",
+            timeout=6,
+        )
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return None
+
+
+def _normalize_plant_title(name: str) -> str:
+    """Normalize common plant names to scientific names for better Wikipedia matches"""
+    key = name.strip().lower()
+    return {
+        "tulip tree": "Liriodendron tulipifera",
+        "yellow poplar": "Liriodendron tulipifera",
+        "snake plant": "Dracaena trifasciata",
+        "mother-in-law's tongue": "Dracaena trifasciata",
+        "spider plant": "Chlorophytum comosum",
+        "pothos": "Epipremnum aureum",
+        "devil's ivy": "Epipremnum aureum",
+        "money plant": "Epipremnum aureum",
+        "peace lily": "Spathiphyllum",
+        "rubber plant": "Ficus elastica",
+        "rubber tree": "Ficus elastica",
+        "zz plant": "Zamioculcas zamiifolia",
+        "monstera": "Monstera deliciosa",
+        "swiss cheese plant": "Monstera deliciosa",
+        "fiddle leaf fig": "Ficus lyrata",
+        "aloe": "Aloe vera",
+        "jade plant": "Crassula ovata",
+        "money tree": "Pachira aquatica",
+        "bird of paradise": "Strelitzia",
+        "boston fern": "Nephrolepis exaltata",
+        "english ivy": "Hedera helix",
+        "philodendron": "Philodendron hederaceum",
+    }.get(key, name.strip())
+
+
+@st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
+def get_plant_image_info(plant_name: str) -> Dict[str, Optional[str]]:
+    """Enhanced image fetching with multiple sources and better fallbacks"""
+    # Try multiple sources in order
+    result = get_plant_image_from_pexels(plant_name)
+    if result and result.get("url"):
+        return result
     
-    for key, value in light_conditions.items():
-        if key in lower_text:
-            facts["Light"] = value
+    result = get_plant_image_from_gbif(plant_name)
+    if result and result.get("url"):
+        return result
+    
+    result = get_plant_image_from_wikipedia(plant_name)
+    if result and result.get("url"):
+        return result
+    
+    return get_plant_image_from_unsplash(plant_name)
+
+
+def get_plant_image_url(plant_name: str) -> str:
+    """Backward compatibility helper"""
+    return get_plant_image_info(plant_name)["url"]
+
+
+# =========================================================
+# Quick facts extraction
+# =========================================================
+def extract_quick_facts(analysis: str) -> Dict[str, str]:
+    facts: Dict[str, str] = {}
+    lower = analysis.lower()
+
+    if "toxic" in lower:
+        facts["Safety"] = "Pet Safe ✅" if any(t in lower for t in ["not toxic", "non-toxic", "non toxic", "safe for pets"]) else "Toxic ⚠️"
+
+    for k, v in {
+        "full sun": "☀️ Full Sun",
+        "partial shade": "⛅ Partial",
+        "full shade": "🌙 Shade",
+        "bright indirect": "💡 Bright",
+        "low light": "🔅 Low Light",
+    }.items():
+        if k in lower:
+            facts["Light"] = v
             break
-    
-    # Watering
-    if "daily" in lower_text or "every day" in lower_text:
-        facts["Water"] = "Daily 💧"
-    elif "weekly" in lower_text or "once a week" in lower_text:
-        facts["Water"] = "Weekly 💦"
-    elif "moderate" in lower_text:
-        facts["Water"] = "Moderate 💧"
-    elif "drought" in lower_text or "minimal" in lower_text:
-        facts["Water"] = "Minimal 🌵"
-    
+
+    for k, v in {
+        "daily": "💧 Daily",
+        "weekly": "💦 Weekly",
+        "moderate": "💧 Moderate",
+        "drought": "🌵 Minimal",
+    }.items():
+        if k in lower:
+            facts["Water"] = v
+            break
+
     return facts
 
 
-def render_minimal_footer():
-    """Render a minimal footer"""
-    st.markdown("""
-    <div style="text-align: center; margin-top: 3rem; padding-top: 2rem; 
-                border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem;">
-        Plant Facts Explorer • AI-Powered Plant Guide<br>
-        <small>For informational purposes only</small>
-    </div>
-    """, unsafe_allow_html=True)
+# =========================================================
+# Main renderer with support for uploaded images
+# =========================================================
+def render_plant_analysis_display(
+    plant_name: str,
+    analysis: str,
+    mute_audio: bool = True,
+    particles: bool = True,
+    allow_model_html: bool = True,
+    show_header: bool = False,
+    uploaded_image_bytes: Optional[bytes] = None,
+) -> None:
+    """
+    Left: image + quick facts (+ optional audio).
+    Right: show LLM output exactly as provided.
+    """
+    # Render beautiful particles (single stunning effect)
+    render_particles(enabled=particles)
+
+    # Only render the big gradient header if explicitly requested
+    if show_header:
+        render_header()
+
+    st.html(f'<div class="bar-title">🌱 Analysis: {_html.escape(plant_name)}</div>')
+
+    left, right = st.columns([2, 3], gap="large")
+
+    with left:
+        # Use uploaded image if provided, otherwise search for one
+        if uploaded_image_bytes:
+            st.image(uploaded_image_bytes, caption=f"🌿 {plant_name} - User's Image", use_container_width=True)
+        else:
+            img = get_plant_image_info(plant_name)
+            cap = f"🌿 {plant_name}"
+            if img.get("page_url"):
+                cap += f" • [{img['caption']}]({img['page_url']})"
+            else:
+                cap += f" • {img['caption']}"
+            st.image(img["url"], caption=cap, use_container_width=True)
+
+        st.markdown("#### ⭐ Quick Facts")
+        facts = extract_quick_facts(analysis)
+        if facts:
+            cols = st.columns(2)
+            for i, (label, value) in enumerate(facts.items()):
+                with cols[i % 2]:
+                    st.metric(label=label, value=value)
+
+        if not mute_audio:
+            st.markdown("#### 🔊 Audio Guide")
+            with st.spinner("Generating audio..."):
+                try:
+                    clean = re.sub(r"\s+", " ", analysis).strip()
+                    data = BytesIO()
+                    gTTS(text=clean, lang="en").write_to_fp(data)
+                    st.audio(data, format="audio/mpeg")
+                except Exception as e:
+                    st.warning(f"Audio unavailable: {e}")
+
+    with right:
+        st.markdown("#### 📋 Detailed Information")
+        if allow_model_html:
+            st.markdown(analysis, unsafe_allow_html=True)
+        else:
+            st.markdown(analysis)
+
+
+# =========================================================
+# Public helpers
+# =========================================================
+def render_custom_css() -> None:
+    load_custom_css()
+
+
+def render_legal_footer() -> None:
+    st.html(
+        """
+        <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
+             background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
+          <div>🌿 Plant Facts Explorer • Version 8.1.0</div>
+          <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
+        </div>
+        """
+    )
+
+
+# Backward compatibility
+def get_plant_image(plant_name: str) -> str:
+    return get_plant_image_url(plant_name)

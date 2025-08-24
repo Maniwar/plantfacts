@@ -1,14 +1,13 @@
 """
-Plant Facts Explorer - Clean UI/UX Version
-Simplified, user-focused interface with better information hierarchy
-Author: Maniwar (UI/UX Improvements)
-Version: 6.0.0
+Plant Facts Explorer - Main Application
+A modular Streamlit app for plant identification and information
+Author: Maniwar
+Version: 5.1.0 - Enhanced search with Enter key support and auto-search on selection
 """
 
 import streamlit as st
 import base64
 import logging
-from streamlit_searchbox import st_searchbox
 
 # Configure logging
 logging.basicConfig(
@@ -22,30 +21,36 @@ if 'initialized' not in st.session_state:
     st.cache_resource.clear()
     st.session_state.initialized = True
 
-# Import utils modules
+# Global setting for particles (easily toggle on/off)
+ENABLE_PARTICLES = False  # Set to True to enable subtle particle effects
+
+# Import streamlit_searchbox
+from streamlit_searchbox import st_searchbox
+
+# Import utils modules directly
 from utils.config import AppConfig
 from utils.cache_service import CacheService
 from utils.plant_service import PlantService
 from utils.search_service import get_search_suggestions
 from utils.ui_components import (
-    get_plant_image_info,
-    extract_quick_facts,
+    render_header,
+    render_custom_css,
+    render_plant_analysis_display,
+    render_legal_footer,
     render_streaming_content
 )
 
 # Initialize configuration
 config = AppConfig()
 
-# Page configuration - centered layout for better focus
+# Page configuration
 st.set_page_config(
-    layout="centered",  # Changed from wide to centered
+    layout="wide",
     page_title=config.PAGE_TITLE,
-    page_icon=config.PAGE_ICON,
-    initial_sidebar_state="collapsed"  # Hide sidebar by default
+    page_icon=config.PAGE_ICON
 )
 
-# Initialize services
-@st.cache_resource
+# Initialize services without caching to avoid stale instances
 def init_services():
     """Initialize service instances"""
     cache_service = CacheService()
@@ -59,392 +64,339 @@ if not plant_service.is_ready():
     st.error("⚠️ OpenAI API not configured. Please add OPENAI_API_KEY to your secrets.")
     st.stop()
 
-# Clean, minimal CSS
-st.markdown("""
-<style>
-    /* Clean, modern typography */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    .stApp {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    
-    /* Hide Streamlit branding for cleaner look */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    
-    /* Clean header without animations */
-    .main-header {
-        text-align: center;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-    }
-    
-    .main-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #1a1a1a;
-        margin-bottom: 0.5rem;
-    }
-    
-    .main-subtitle {
-        font-size: 1.1rem;
-        color: #666;
-        font-weight: 400;
-    }
-    
-    /* Method cards */
-    .method-card {
-        background: #ffffff;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 1.5rem;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .method-card:hover {
-        border-color: #059669;
-        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15);
-    }
-    
-    .method-card.selected {
-        border-color: #059669;
-        background: #f0fdf4;
-    }
-    
-    .method-icon {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .method-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #1a1a1a;
-        margin-bottom: 0.25rem;
-    }
-    
-    .method-desc {
-        font-size: 0.9rem;
-        color: #666;
-    }
-    
-    /* Search interface */
-    .search-container {
-        background: #f9fafb;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1.5rem 0;
-    }
-    
-    /* Popular plants - minimal */
-    .quick-plants {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        margin-top: 1rem;
-    }
-    
-    .plant-chip {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 20px;
-        padding: 0.4rem 1rem;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .plant-chip:hover {
-        background: #059669;
-        color: white;
-        border-color: #059669;
-    }
-    
-    /* Results section */
-    .results-container {
-        margin-top: 2rem;
-        padding-top: 2rem;
-        border-top: 1px solid #e5e7eb;
-    }
-    
-    /* Plant info card */
-    .plant-card {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .plant-header {
-        background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        color: white;
-        padding: 1rem 1.5rem;
-    }
-    
-    .plant-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin: 0;
-    }
-    
-    .quick-facts-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: 1rem;
-        padding: 1rem;
-        background: #f9fafb;
-    }
-    
-    .fact-item {
-        text-align: center;
-        padding: 0.75rem;
-        background: white;
-        border-radius: 8px;
-        border: 1px solid #e5e7eb;
-    }
-    
-    .fact-label {
-        font-size: 0.8rem;
-        color: #666;
-        margin-bottom: 0.25rem;
-    }
-    
-    .fact-value {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #1a1a1a;
-    }
-    
-    /* Clean info display */
-    .info-section {
-        padding: 1.5rem;
-    }
-    
-    .info-section h3 {
-        color: #059669;
-        font-size: 1.2rem;
-        margin-bottom: 0.5rem;
-        border-bottom: 2px solid #e5e7eb;
-        padding-bottom: 0.5rem;
-    }
-    
-    /* Loading state */
-    .loading-message {
-        text-align: center;
-        padding: 2rem;
-        color: #666;
-    }
-    
-    /* Hide Streamlit's default radio button styling */
-    .stRadio > div {
-        display: none !important;
-    }
-    
-    /* Success message */
-    .cache-badge {
-        display: inline-block;
-        background: #f0fdf4;
-        color: #059669;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        margin-bottom: 1rem;
-    }
-    
-    /* Reduce default Streamlit spacing */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-    
-    /* Footer */
-    .app-footer {
-        text-align: center;
-        padding: 2rem 0;
-        margin-top: 4rem;
-        border-top: 1px solid #e5e7eb;
-        color: #666;
-        font-size: 0.9rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Apply minimal custom CSS
+render_custom_css()
 
-# Clean header
-st.markdown("""
-<div class="main-header">
-    <div class="main-title">🌿 Plant Facts Explorer</div>
-    <div class="main-subtitle">Get instant AI-powered information about any plant</div>
-</div>
-""", unsafe_allow_html=True)
+# Render header
+render_header()
 
-# Initialize session state for method selection
-if 'selected_method' not in st.session_state:
-    st.session_state.selected_method = None
-
-# Method selection with visual cards
-st.markdown("### Choose how to identify your plant")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("🔍\n\n**Search**\n\nType plant name", key="method_search", use_container_width=True):
-        st.session_state.selected_method = "search"
-
-with col2:
-    if st.button("📸\n\n**Camera**\n\nTake a photo", key="method_camera", use_container_width=True):
-        st.session_state.selected_method = "camera"
-
-with col3:
-    if st.button("📁\n\n**Upload**\n\nChoose image", key="method_upload", use_container_width=True):
-        st.session_state.selected_method = "upload"
-
-# Main content area based on selection
-if st.session_state.selected_method:
-    st.markdown("---")
+# Show cache status at the top (no sidebar)
+with st.expander("🔧 System Status", expanded=False):
+    col1, col2, col3 = st.columns(3)
     
-    if st.session_state.selected_method == "search":
-        st.markdown("### 🔍 Search for a plant")
+    with col1:
+        if cache_service.is_connected():
+            st.success("✅ Cache: Connected")
+        else:
+            st.warning("⚠️ Cache: Running without caching")
+            st.caption("Redis not configured - app works but responses won't be cached")
+    
+    with col2:
+        st.info(f"📊 Version: {config.APP_VERSION}")
+    
+    with col3:
+        st.info(f"👤 Author: {config.AUTHOR}")
+    
+    # Advanced cache debug (only if connected)
+    if cache_service.is_connected():
+        with st.container():
+            st.divider()
+            test_plant = st.text_input("🔍 Check if plant is cached:", placeholder="e.g., Rose", key="cache_check")
+            if test_plant:
+                test_plant_normalized = test_plant.strip().title()
+                if plant_service.get_cached_analysis(test_plant_normalized):
+                    st.success(f"✅ '{test_plant_normalized}' is in cache")
+                    col_a, col_b = st.columns([1, 3])
+                    with col_a:
+                        if st.button("🗑️ Clear this cache entry", key="clear_cache"):
+                            cache_key = f"{config.CACHE_KEY_PREFIX}{test_plant_normalized}"
+                            if cache_service.delete(cache_key):
+                                st.info(f"Cleared cache for '{test_plant_normalized}'")
+                                st.rerun()
+                else:
+                    st.info(f"❌ '{test_plant_normalized}' not cached yet")
+
+# Input method selector with modern styling
+with st.container():
+    st.subheader("🎯 Choose Your Input Method")
+    input_method = st.radio(
+        "Select how you want to identify your plant:",
+        config.INPUT_METHODS,
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+
+# Search Box Method - Unified solution with Enter key support
+if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
+    with st.container(border=True):
+        st.subheader("🔍 Search for Plants")
         
-        # Single, clean search interface
-        plant_name = st_searchbox(
-            search_function=get_search_suggestions,
-            placeholder="Type plant name (e.g., Monstera, Rose, Fern)...",
-            label=None,
-            clear_on_submit=False,
-            clearable=True,
-            key="plant_searchbox"
-        )
+        # Initialize session state
+        if 'do_search' not in st.session_state:
+            st.session_state.do_search = False
+        if 'search_query' not in st.session_state:
+            st.session_state.search_query = ""
         
-        col1, col2 = st.columns([3, 1])
+        # Main search interface
+        col1, col2 = st.columns([4, 1], gap="medium")
+        
         with col1:
-            # Popular suggestions (reduced to 5)
-            st.markdown("**Popular:** Rose • Monstera • Snake Plant • Orchid • Aloe Vera")
+            # Define callback for searchbox selection
+            def handle_selection(selected_value):
+                """Automatically trigger search when item is selected from dropdown"""
+                if selected_value:
+                    st.session_state.search_query = selected_value
+                    st.session_state.do_search = True
+            
+            # Searchbox with automatic search on selection
+            plant_name = st_searchbox(
+                search_function=get_search_suggestions,
+                placeholder="Type plant name...",
+                label=None,
+                clear_on_submit=False,
+                clearable=True,
+                key="plant_searchbox",
+                submit_function=handle_selection  # Auto-search on selection
+            )
+        
         with col2:
-            search_clicked = st.button("Search 🔍", type="primary", use_container_width=True)
+            # Search button for typed text (without selection)
+            if st.button("🔍 Search", type="primary", use_container_width=True):
+                if plant_name:
+                    st.session_state.search_query = plant_name
+                    st.session_state.do_search = True
         
-        if search_clicked and plant_name:
-            process_plant_search(plant_name)
+        # For mobile/Enter key support: Simple text input as fallback
+        with st.container():
+            st.caption("💡 Type pick from the drop down menu above and click search, or do a direct search below and press enter.:")
+            
+            # Form captures Enter key
+            with st.form(key="text_search_form", clear_on_submit=False):
+                cols = st.columns([5, 1])
+                with cols[0]:
+                    text_input = st.text_input(
+                        "Direct input",
+                        placeholder="Type any plant name and press Enter...",
+                        label_visibility="collapsed",
+                        value=plant_name if plant_name else ""  # Mirror searchbox value
+                    )
+                with cols[1]:
+                    if st.form_submit_button("Go →", use_container_width=True):
+                        if text_input:
+                            st.session_state.search_query = text_input
+                            st.session_state.do_search = True
+        
+        # Quick search buttons for popular plants
+        st.divider()
+        st.caption("🌿 **Popular plants** - tap to search instantly:")
+        
+        # Two rows of quick buttons
+        row1_cols = st.columns(5)
+        popular_plants_row1 = ["Rose", "Monstera", "Snake Plant", "Orchid", "Fern"]
+        for idx, plant in enumerate(popular_plants_row1):
+            with row1_cols[idx]:
+                if st.button(plant, key=f"pop_{plant}", use_container_width=True):
+                    st.session_state.search_query = plant
+                    st.session_state.do_search = True
+        
+        row2_cols = st.columns(5)
+        popular_plants_row2 = ["Cactus", "Aloe Vera", "Pothos", "Peace Lily", "Bamboo"]
+        for idx, plant in enumerate(popular_plants_row2):
+            with row2_cols[idx]:
+                if st.button(plant, key=f"pop2_{plant}", use_container_width=True, type="secondary"):
+                    st.session_state.search_query = plant
+                    st.session_state.do_search = True
+        
+        st.divider()
+        mute_audio = st.checkbox("🔇 Mute Audio", value=True)
     
-    elif st.session_state.selected_method == "camera":
-        st.markdown("### 📸 Take a photo")
+    # Execute search when triggered
+    if st.session_state.do_search and st.session_state.search_query:
+        # Reset the trigger
+        st.session_state.do_search = False
+        search_term = st.session_state.search_query
         
-        captured_image = st.camera_input("Point your camera at the plant", label_visibility="collapsed")
-        
-        if captured_image:
-            process_plant_image(captured_image, "Camera capture")
-    
-    elif st.session_state.selected_method == "upload":
-        st.markdown("### 📁 Upload an image")
+        try:
+            # Normalize plant name for consistent caching
+            plant_name = search_term.strip().title()
+            
+            if not plant_name:
+                st.warning("Please enter a plant name to search.")
+            else:
+                # Create a placeholder for the content
+                content_placeholder = st.empty()
+                
+                # Check cache first
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                
+                if cached_analysis:
+                    # Display cached content instantly
+                    if cache_service.is_connected():
+                        st.info("💾 Loading from cache - instant results!")
+                    analysis = cached_analysis
+                else:
+                    # Stream new content
+                    st.info("🌿 Generating new analysis...")
+                    
+                    with content_placeholder.container():
+                        st.markdown("### 🔍 Live Analysis Stream")
+                        analysis = ""
+                        stream_container = st.empty()
+                        
+                        for chunk in plant_service.get_analysis_stream(plant_name):
+                            analysis += chunk
+                            render_streaming_content(analysis, stream_container)
+                    
+                    content_placeholder.empty()
+                    if cache_service.is_connected():
+                        st.success("✅ Analysis complete and cached for future use!")
+                    else:
+                        st.success("✅ Analysis complete!")
+                
+                # Display the formatted analysis
+                st.divider()
+                render_plant_analysis_display(plant_name, analysis, mute_audio, particles=ENABLE_PARTICLES)
+                
+        except Exception as e:
+            st.error(f"❌ Error analyzing plant: {str(e)}")
+            logging.error(f"Search error: {str(e)}")
+
+# File Upload Method
+elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
+    with st.container(border=True):
+        st.subheader("📁 Upload Plant Image")
         
         uploaded_image = st.file_uploader(
-            "Choose an image file",
+            "Drop an image or click to browse",
             type=['jpg', 'jpeg', 'png'],
-            label_visibility="collapsed"
+            help="Supported formats: JPG, PNG"
         )
         
-        if uploaded_image:
-            process_plant_image(uploaded_image, "Uploaded image")
+        mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_upload")
+    
+    if uploaded_image:
+        # Read image bytes once
+        image_bytes = uploaded_image.read()
+        uploaded_image.seek(0)  # Reset for potential re-reading
+        
+        col1, col2 = st.columns([1, 2], gap="medium")
+        
+        with col1:
+            st.image(image_bytes, caption='Uploaded Image', use_container_width=True)
+        
+        with col2:
+            try:
+                with st.spinner("🤖 Identifying plant..."):
+                    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+                    
+                    plant_name = plant_service.identify_plant_from_image(image_b64)
+                    st.success(f"✅ Identified: **{plant_name}**")
+                
+                # Create placeholder for content
+                content_placeholder = st.empty()
+                
+                # Check cache status
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                
+                if cached_analysis:
+                    # Display cached content instantly
+                    if cache_service.is_connected():
+                        st.info("💾 Loading from cache - instant results!")
+                    analysis = cached_analysis
+                else:
+                    # Stream new content
+                    st.info("🌿 Generating detailed information...")
+                    
+                    with content_placeholder.container():
+                        st.markdown("### 🔍 Live Analysis Stream")
+                        analysis = ""
+                        stream_container = st.empty()
+                        
+                        for chunk in plant_service.get_analysis_stream(plant_name):
+                            analysis += chunk
+                            render_streaming_content(analysis, stream_container)
+                    
+                    content_placeholder.empty()
+                    if cache_service.is_connected():
+                        st.success("✅ Analysis complete and cached for future use!")
+                    else:
+                        st.success("✅ Analysis complete!")
+            
+            except Exception as e:
+                st.error(f"❌ Error processing image: {str(e)}")
+                logging.error(f"Image processing error: {str(e)}")
+        
+        # Display formatted analysis with the uploaded image
+        if 'analysis' in locals():
+            st.divider()
+            render_plant_analysis_display(
+                plant_name, 
+                analysis, 
+                mute_audio,
+                particles=ENABLE_PARTICLES,
+                uploaded_image_bytes=image_bytes  # Pass the uploaded image
+            )
 
-# Helper functions for processing
-def process_plant_search(plant_name):
-    """Process plant search and display results"""
-    plant_name = plant_name.strip().title()
-    
-    # Check cache first
-    with st.spinner("Searching..."):
-        cached_analysis = plant_service.get_cached_analysis(plant_name)
-    
-    if cached_analysis:
-        st.markdown('<div class="cache-badge">✓ Loaded from cache</div>', unsafe_allow_html=True)
-        display_plant_info(plant_name, cached_analysis)
-    else:
-        # Generate new analysis
-        st.info("Generating analysis...")
-        analysis = ""
-        container = st.empty()
+# Camera Capture Method
+elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
+    with st.container(border=True):
+        st.subheader("📸 Capture Plant Image")
         
-        for chunk in plant_service.get_analysis_stream(plant_name):
-            analysis += chunk
-            container.markdown(analysis)
+        captured_image = st.camera_input("Take a photo of your plant")
+        mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_camera")
+    
+    if captured_image:
+        # Read image bytes once
+        image_bytes = captured_image.read()
+        captured_image.seek(0)  # Reset for potential re-reading
         
-        container.empty()
-        display_plant_info(plant_name, analysis)
+        col1, col2 = st.columns([1, 2], gap="medium")
+        
+        with col1:
+            st.image(image_bytes, caption='Captured Image', use_container_width=True)
+        
+        with col2:
+            try:
+                with st.spinner("🤖 Identifying plant..."):
+                    image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+                    
+                    plant_name = plant_service.identify_plant_from_image(image_b64)
+                    st.success(f"✅ Identified: **{plant_name}**")
+                
+                # Create placeholder for content
+                content_placeholder = st.empty()
+                
+                # Check cache status
+                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                
+                if cached_analysis:
+                    # Display cached content instantly
+                    if cache_service.is_connected():
+                        st.info("💾 Loading from cache - instant results!")
+                    analysis = cached_analysis
+                else:
+                    # Stream new content
+                    st.info("🌿 Generating detailed information...")
+                    
+                    with content_placeholder.container():
+                        st.markdown("### 🔍 Live Analysis Stream")
+                        analysis = ""
+                        stream_container = st.empty()
+                        
+                        for chunk in plant_service.get_analysis_stream(plant_name):
+                            analysis += chunk
+                            render_streaming_content(analysis, stream_container)
+                    
+                    content_placeholder.empty()
+                    if cache_service.is_connected():
+                        st.success("✅ Analysis complete and cached for future use!")
+                    else:
+                        st.success("✅ Analysis complete!")
+            
+            except Exception as e:
+                st.error(f"❌ Error processing image: {str(e)}")
+                logging.error(f"Camera capture error: {str(e)}")
+        
+        # Display formatted analysis with the captured image
+        if 'analysis' in locals():
+            st.divider()
+            render_plant_analysis_display(
+                plant_name, 
+                analysis, 
+                mute_audio,
+                particles=ENABLE_PARTICLES,
+                uploaded_image_bytes=image_bytes  # Pass the captured image
+            )
 
-def process_plant_image(image_file, source_type):
-    """Process uploaded/captured image"""
-    image_bytes = image_file.read()
-    
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.image(image_bytes, caption=source_type, use_container_width=True)
-    
-    with col2:
-        with st.spinner("Identifying plant..."):
-            image_b64 = base64.b64encode(image_bytes).decode("utf-8")
-            plant_name = plant_service.identify_plant_from_image(image_b64)
-            st.success(f"Identified: **{plant_name}**")
-    
-    # Get analysis
-    cached_analysis = plant_service.get_cached_analysis(plant_name)
-    
-    if cached_analysis:
-        st.markdown('<div class="cache-badge">✓ Loaded from cache</div>', unsafe_allow_html=True)
-        display_plant_info(plant_name, cached_analysis, image_bytes)
-    else:
-        st.info("Generating analysis...")
-        analysis = ""
-        container = st.empty()
-        
-        for chunk in plant_service.get_analysis_stream(plant_name):
-            analysis += chunk
-            container.markdown(analysis)
-        
-        container.empty()
-        display_plant_info(plant_name, analysis, image_bytes)
-
-def display_plant_info(plant_name, analysis, user_image=None):
-    """Display plant information in a clean, organized way"""
-    st.markdown("---")
-    st.markdown(f"## 🌱 {plant_name}")
-    
-    # Image and quick facts side by side
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        if user_image:
-            st.image(user_image, caption="Your plant", use_container_width=True)
-        else:
-            img_info = get_plant_image_info(plant_name)
-            st.image(img_info["url"], caption=img_info["caption"], use_container_width=True)
-    
-    with col2:
-        st.markdown("### Quick Facts")
-        facts = extract_quick_facts(analysis)
-        
-        if facts:
-            for label, value in facts.items():
-                st.metric(label=label, value=value)
-        else:
-            st.info("See detailed information below")
-    
-    # Detailed information
-    st.markdown("### Detailed Information")
-    
-    # Display analysis in a clean container
-    with st.container():
-        st.markdown(analysis)
-
-# Minimal footer
-st.markdown("---")
-st.markdown("""
-<div class="app-footer">
-    Plant Facts Explorer v6.0 • Powered by AI
-    <br>
-    <small>For informational purposes only. Always consult experts for professional advice.</small>
-</div>
-""", unsafe_allow_html=True)
+# Footer
+render_legal_footer()
