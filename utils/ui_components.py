@@ -121,13 +121,13 @@ def render_particles(
     preset: str = "leaves",   # "aurora" | "constellation" | "leaves"
     watermark_text: str = "AI Analysis",
     watermark_opacity: float = 0.12,
-    intensity: float = 1.0,   # 0.5..1.5 scales motion/quantity
+    intensity: float = 1.5,   # 0.5..1.5 scales motion/quantity
     show_watermark: bool = True,
 ) -> None:
     """
-    Fancy particle backgrounds using tsParticles with three presets.
-    - No Streamlit 'key' needed; safe for older versions.
-    - Pointer-events disabled; does not block UI.
+    Fancy particle backgrounds with auto-resizing watermark text.
+    - Text size scales down for short containers (e.g. 100px).
+    - Presets: aurora, constellation, leaves.
     """
     if not enabled:
         return
@@ -138,9 +138,17 @@ def render_particles(
     # Clamp/sanitize
     preset = (preset or "aurora").lower().strip()
     if preset not in {"aurora", "constellation", "leaves"}:
-        preset = "aurora"
+        preset = "leaves"
     intensity = max(0.4, min(1.6, float(intensity)))
     wm = (watermark_text or "").strip() or "AI Analysis"
+
+    # Decide font sizing based on height
+    if height <= 120:
+        font_css = '600 clamp(12px, 4vw, 32px)'
+    elif height <= 200:
+        font_css = '700 clamp(16px, 5vw, 48px)'
+    else:
+        font_css = '800 clamp(24px, 8vw, 96px)'
 
     html_code = """
     <!doctype html><html><head><meta charset="utf-8"/>
@@ -151,9 +159,9 @@ def render_particles(
       #tsp { position:absolute; inset:0; z-index:0; }
       #wm {
         position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-        font: 800 clamp(42px, 16vw, 220px) "Space Grotesk", Inter, system-ui, -apple-system, sans-serif;
-        letter-spacing:.04em; color:#fff; opacity:var(--wm-opacity);
-        text-shadow:0 4px 18px rgba(0,0,0,.28); z-index:1; white-space:nowrap; user-select:none;
+        font: __FONT__ "Space Grotesk", Inter, system-ui, -apple-system, sans-serif;
+        letter-spacing:.03em; color:#fff; opacity:var(--wm-opacity);
+        text-shadow:0 2px 8px rgba(0,0,0,.25); z-index:1; white-space:nowrap; user-select:none;
         animation: floatSlow 18s ease-in-out infinite;
       }
       @keyframes floatSlow {
@@ -174,26 +182,19 @@ def render_particles(
         (async () => {
           const engine = window.tsParticles;
           const PRESET = "__PRESET__";
-          const INTENSITY = __INTENSITY__;   // scales counts & speeds
+          const INTENSITY = __INTENSITY__;
 
-          // Base colors
           const palette = ["#a7f3d0","#93c5fd","#c4b5fd","#fde68a"];
-
-          // Build config per preset
           let config = {
             detectRetina: true,
             fullScreen: { enable: false },
             background: { color: { value: "transparent" } },
             fpsLimit: 60,
             particles: {},
-            interactivity: {
-              events: { resize: true },
-              modes: {}
-            }
+            interactivity: { events: { resize: true }, modes: {} }
           };
 
           if (PRESET === "aurora") {
-            // Flowing ribbons using trails + curved motion
             config.particles = {
               number: { value: Math.round(18 * INTENSITY), density: { enable: true, area: 800 } },
               color: { value: palette },
@@ -202,9 +203,7 @@ def render_particles(
               move: {
                 enable: true,
                 speed: 0.55 * INTENSITY,
-                direction: "none",
                 random: true,
-                straight: false,
                 outModes: { default: "out" },
                 trail: { enable: true, length: Math.round(14 * INTENSITY), fill: { color: "transparent" } }
               },
@@ -212,22 +211,20 @@ def render_particles(
             };
             config.interactivity.events.onHover = { enable: true, mode: "attract" };
             config.interactivity.modes.attract = { distance: 160, duration: 0.4 };
-
-          } else if (PRESET === "constellation") {
-            // Dense starfield with twinkling links
+          } 
+          else if (PRESET === "constellation") {
             config.particles = {
               number: { value: Math.round(70 * INTENSITY), density: { enable: true, area: 800 } },
               color: { value: "#e5f0ff" },
-              opacity: { value: { min: 0.15, max: 0.55 }, animation: { enable: true, speed: 0.6, sync: false } },
+              opacity: { value: { min: 0.15, max: 0.55 }, animation: { enable: true, speed: 0.6 } },
               size: { value: { min: 1, max: 2.6 } },
               move: { enable: true, speed: 0.45 * INTENSITY, outModes: { default: "out" } },
               links: { enable: true, distance: 140, opacity: 0.18, color: "#bcd1ff" }
             };
             config.interactivity.events.onHover = { enable: true, mode: "repulse" };
             config.interactivity.modes.repulse = { distance: 120, duration: 0.3 };
-
-          } else if (PRESET === "leaves") {
-            // Drifting leaf glyphs (emoji + simple shapes)
+          } 
+          else if (PRESET === "leaves") {
             config.particles = {
               number: { value: Math.round(22 * INTENSITY), density: { enable: true, area: 800 } },
               color: { value: ["#8ee59b","#6ee7b7","#a3e635", "#86efac"] },
@@ -235,14 +232,7 @@ def render_particles(
               size: { value: { min: 6, max: 12 } },
               shape: {
                 type: ["character","circle"],
-                options: {
-                  character: [{
-                    value: "🍃",
-                    font: "Segoe UI Emoji",
-                    style: "",
-                    weight: "400"
-                  }]
-                }
+                options: { character: [{ value: "🍃", font: "Segoe UI Emoji" }] }
               },
               move: {
                 enable: true,
@@ -250,10 +240,9 @@ def render_particles(
                 direction: "bottom",
                 outModes: { default: "out" },
                 drift: 0.6,
-                angle: { offset: 20, value: 40 },
-                gravity: { enable: false }
+                angle: { offset: 20, value: 40 }
               },
-              rotate: { value: { min: 0, max: 360 }, direction: "random", animation: { enable: true, speed: 6 } },
+              rotate: { value: { min: 0, max: 360 }, animation: { enable: true, speed: 6 } },
               links: { enable: false }
             };
           }
@@ -270,7 +259,8 @@ def render_particles(
           .replace("__INTENSITY__", json.dumps(float(intensity)))
           .replace("__WM_TEXT__", (wm if show_watermark else ""))
           .replace("__WM_DISPLAY__", "block" if show_watermark else "none")
-          .replace("__WM_OPACITY__", str(watermark_opacity)),
+          .replace("__WM_OPACITY__", str(watermark_opacity))
+          .replace("__FONT__", font_css),
         height=height,
         scrolling=False,
     )
