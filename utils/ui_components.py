@@ -125,8 +125,9 @@ def render_particles(
     """
     Background visuals:
       • Linked dot particles (optional)
-      • One large, subtle watermark with the PLANT NAME (HTML/CSS, always visible)
-    Re-renders per plant via a unique component key.
+      • One large, subtle watermark with the PLANT NAME (HTML/CSS)
+    Uses unique element IDs based on the plant name, so it re-renders correctly
+    even without a 'key' parameter in older Streamlit.
     """
     if not enabled:
         return
@@ -134,48 +135,51 @@ def render_particles(
     import json
     from streamlit.components.v1 import html as _html_iframe
 
-    label = (plant_name or "Plant").strip()
-    dot_count = 34 if show_dots else 0
+    label = (plant_name or "").strip() or "Plant"
+
+    # Unique IDs to force a fresh DOM per plant (no Streamlit 'key' needed)
+    seed = abs(hash(label)) % 1_000_000
+    STAGE_ID = f"stage_{seed}"
+    TSP_ID   = f"tsp_{seed}"
+    WM_ID    = f"wm_{seed}"
+    DOT_COUNT = 34 if show_dots else 0
 
     html_code = """
     <!doctype html><html><head><meta charset="utf-8"/>
     <style>
       :root { --wm-opacity: __OPACITY__; }
-      html,body,#stage { margin:0; padding:0; height:100%; width:100%; background:transparent; }
-      #stage { position:relative; pointer-events:none; }
-      #tsp { position:absolute; inset:0; z-index:0; }
-      #wm {
+      html,body,#__STAGE__ { margin:0; padding:0; height:100%; width:100%; background:transparent; }
+      #__STAGE__ { position:relative; pointer-events:none; }
+      #__TSP__ { position:absolute; inset:0; z-index:0; }
+      #__WM__ {
         position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
         font: 700 clamp(48px, 18vw, 220px) "Space Grotesk", Inter, sans-serif;
-        letter-spacing: .04em;
-        color: #ffffff;
-        opacity: var(--wm-opacity);
-        text-shadow: 0 2px 14px rgba(0,0,0,.25);
-        z-index: 1;
-        white-space: nowrap;
-        user-select: none;
-        animation: floatSlow 18s ease-in-out infinite;
+        letter-spacing: .04em; color: #ffffff; opacity: var(--wm-opacity);
+        text-shadow: 0 2px 14px rgba(0,0,0,.25); z-index: 1; white-space: nowrap;
+        user-select: none; animation: floatSlow 18s ease-in-out infinite;
       }
       @keyframes floatSlow {
         0%   { transform: translate(-50%,-50%) rotate(0deg); }
         50%  { transform: translate(calc(-50% + 6px), calc(-50% - 6px)) rotate(3deg); }
         100% { transform: translate(-50%,-50%) rotate(0deg); }
       }
+      @media (prefers-reduced-motion: reduce) { #__WM__ { animation: none; } }
     </style></head><body>
-      <div id="stage">
-        <div id="tsp"></div>
-        <div id="wm"></div>
+      <div id="__STAGE__" data-plant="__LABEL__">
+        <div id="__TSP__"></div>
+        <div id="__WM__"></div>
       </div>
+
       <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
       <script>
         (async () => {
-          // Set watermark text from Python
-          document.getElementById("wm").textContent = __LABEL__;
+          // Set watermark text
+          document.getElementById("__WM__").textContent = __LABEL__;
 
           const DOT_COUNT = __DOT_COUNT__;
           if (DOT_COUNT > 0) {
             const engine = window.tsParticles;
-            await engine.load("tsp", {
+            await engine.load("__TSP__", {
               detectRetina: true,
               fullScreen: { enable: false },
               background: { color: { value: "transparent" } },
@@ -198,11 +202,13 @@ def render_particles(
     _html_iframe(
         html_code
         .replace("__LABEL__", json.dumps(label))
-        .replace("__DOT_COUNT__", str(dot_count))
-        .replace("__OPACITY__", str(opacity)),
+        .replace("__DOT_COUNT__", str(DOT_COUNT))
+        .replace("__OPACITY__", str(opacity))
+        .replace("__STAGE__", STAGE_ID)
+        .replace("__TSP__", TSP_ID)
+        .replace("__WM__", WM_ID),
         height=height,
         scrolling=False,
-        key=f"particles-{hash(label) & 0xfffffff}",  # <-- forces re-render per plant
     )
 
 
