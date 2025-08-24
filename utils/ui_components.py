@@ -9,9 +9,6 @@ import re
 from gtts import gTTS
 from io import BytesIO
 from typing import Dict, Optional
-from utils.config import AppConfig
-
-config = AppConfig()
 
 def load_custom_css():
     """
@@ -232,12 +229,20 @@ def get_plant_image(plant_name: str) -> str:
     Returns:
         Image URL
     """
+    # Import config here to avoid circular imports
+    from utils.config import AppConfig
+    config = AppConfig()
+    
     return f"https://source.unsplash.com/{config.IMAGE_WIDTH}x{config.IMAGE_HEIGHT}/?{plant_name.replace(' ', ',')},plant,nature"
 
 def extract_quick_facts(analysis: str) -> Dict[str, str]:
     """
     Extract quick facts from plant analysis
     """
+    # Import config here to avoid circular imports
+    from utils.config import AppConfig
+    config = AppConfig()
+    
     facts = {}
     
     # Toxicity check
@@ -325,7 +330,7 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
     with col2:
         # Create scrollable container for detailed analysis (new 2025 feature)
         with st.container(height=600):
-            st.markdown("### 📊 Detailed Analysis")
+            st.markdown("### 📋 Detailed Analysis")
             
             # Parse and display sections
             sections = analysis.split('\n\n')
@@ -337,7 +342,7 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                     # General Information
                     if any(x in section_lower for x in ["general information", "**1."]):
                         with st.container(border=True):
-                            st.markdown("#### 📍 General Information")
+                            st.markdown("#### 📝 General Information")
                             content = re.sub(r'\*\*(?:1\.|General Information:?)\*\*:?\s*', '', section)
                             st.markdown(content)
                     
