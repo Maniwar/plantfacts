@@ -118,90 +118,88 @@ def render_header(
 def render_particles(enabled: bool = False, plant_name: str = "") -> None:
     """
     Draw a soft, centered watermark using the plant name.
-    - Single large 'char' particle (no clutter)
+    - Single large char particle
     - Low opacity, slow drift
     - Pointer-events disabled; zIndex behind app content
     """
     if not enabled:
         return
 
+    import json
+
     label = (plant_name or "Plant").strip()
-    safe_seed = abs(hash(label)) % (10**6)
+    seed = abs(hash(label)) % (10**6)
+
+    html_code = """
+    <!doctype html><html><head><meta charset="utf-8"/>
+    <style>
+      html,body,#tsp {{ margin:0; padding:0; height:100%; width:100%; background:transparent; }}
+      #tsp {{ position:fixed; inset:0; pointer-events:none; z-index:0; }}
+    </style></head><body>
+      <div id="tsp"></div>
+      <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
+      <script>
+        (async () => {{
+          const engine = window.tsParticles;
+          const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+          const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+          const base = Math.min(vw, vh);
+          const fontSize = Math.max(48, Math.min(0.18 * base, 220));
+
+          await engine.load("tsp", {{
+            autoPlay: true,
+            detectRetina: true,
+            fullScreen: {{ enable: false }},
+            fpsLimit: 45,
+            background: {{ color: {{ value: "transparent" }} }},
+            particles: {{
+              number: {{ value: 1 }},
+              move: {{
+                enable: true,
+                speed: 0.15,
+                direction: "none",
+                random: false,
+                straight: false,
+                drift: 0,
+                outModes: {{ default: "out" }}
+              }},
+              opacity: {{
+                value: 0.07,
+                animation: {{ enable: true, speed: 0.1, minimumValue: 0.04, startValue: "random" }}
+              }},
+              rotate: {{
+                value: 0,
+                direction: "random",
+                animation: {{ enable: true, speed: 2 }}
+              }},
+              size: {{ value: fontSize }},
+              color: {{ value: ["#ffffff", "#cbd5e1"] }},
+              shape: {{
+                type: "char",
+                options: {{
+                  char: [{{
+                    value: {label_json},
+                    font: "Space Grotesk, Inter, system-ui, -apple-system",
+                    style: "",
+                    weight: "700",
+                    fill: true
+                  }}]
+                }}
+              }}
+            }},
+            // deterministic placement based on seed (roughly center-ish)
+            manualParticles: [{{
+              position: {{ x: (({seed} % 30) + 35), y: (({seed} % 30) + 35) }}
+            }}]
+          }});
+        }})();
+      </script>
+    </body></html>
+    """
 
     components.html(
-        f"""
-        <!doctype html><html><head><meta charset="utf-8"/>
-        <style>
-          html,body,#tsp {{ margin:0; padding:0; height:100%; width:100%; background:transparent; }}
-          /* make sure we never block clicks */
-          #tsp { position:fixed; inset:0; pointer-events:none; z-index:0; }
-        </style></head><body>
-          <div id="tsp"></div>
-          <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
-          <script>
-            (async () => {{
-              const engine = window.tsParticles;
-              // responsive font size based on viewport width/height
-              const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-              const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-              const base = Math.min(vw, vh);
-              // Big but gentle
-              const fontSize = Math.max(48, Math.min(0.18 * base, 220));
-
-              await engine.load("tsp", {{
-                autoPlay: true,
-                detectRetina: true,
-                fullScreen: {{ enable: false }},
-                fpsLimit: 45,
-                background: {{ color: {{ value: "transparent" }} }},
-                particles: {{
-                  number: {{ value: 1 }},
-                  move: {{
-                    enable: true,
-                    speed: 0.15,
-                    direction: "none",
-                    random: false,
-                    straight: false,
-                    drift: 0,
-                    outModes: {{ default: "out" }}
-                  }},
-                  opacity: {{
-                    value: 0.07,             // subtle
-                    animation: {{ enable: true, speed: 0.1, minimumValue: 0.04, startValue: "random" }}
-                  }},
-                  rotate: {{
-                    value: 0,
-                    direction: "random",
-                    animation: {{ enable: true, speed: 2 }}
-                  }},
-                  size: {{ value: fontSize }},
-                  color: {{ value: ["#ffffff", "#cbd5e1"] }}, // white / slate-300
-                  shape: {{
-                    type: "char",
-                    options: {{
-                      char: [{{
-                        value: "{label.replace('"', '\\"')}",
-                        font: "Space Grotesk, Inter, system-ui, -apple-system",
-                        style: "",
-                        weight: "700",
-                        fill: true
-                      }}]
-                    }}
-                  }}
-                }},
-                // deterministic positioning based on seed
-                manualParticles: [{{
-                  position: {{
-                    x: ( {safe_seed} % 30 ) + 35,  // 35%–65% width
-                    y: ( {safe_seed} % 30 ) + 35   // 35%–65% height
-                  }}
-                }}]
-              }});
-            }})();
-          </script>
-        </body></html>
-        """,
-        height=0,         # fixed/fullscreen; no extra vertical space in Streamlit layout
+        html_code.format(label_json=json.dumps(label), seed=seed),
+        height=0,           # fixed overlay; no extra layout space
         scrolling=False,
     )
 
