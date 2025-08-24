@@ -84,10 +84,12 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
             # Check if we have cached data
             if plant_service.get_cached_analysis(plant_name):
                 with st.spinner("✨ Loading from cache..."):
-                    analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
+                    # For cached data, display instantly without streaming
+                    analysis = plant_service.get_cached_analysis(plant_name)
                     st.info("💾 Loaded from cache - instant results!")
             else:
                 with st.spinner("🌿 Analyzing plant information..."):
+                    # For new data, use streaming
                     analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
                     st.success("✅ Analysis complete and cached for future use!")
             
@@ -127,10 +129,12 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                 # Check cache status
                 if plant_service.get_cached_analysis(plant_name):
                     with st.spinner("✨ Loading from cache..."):
-                        analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
+                        # For cached data, display instantly
+                        analysis = plant_service.get_cached_analysis(plant_name)
                         st.info("💾 Loaded from cache - instant results!")
                 else:
                     with st.spinner("🌿 Fetching detailed information..."):
+                        # For new data, use streaming
                         analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
                         st.success("✅ Analysis complete and cached for future use!")
             
@@ -167,10 +171,12 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                 # Check cache status
                 if plant_service.get_cached_analysis(plant_name):
                     with st.spinner("✨ Loading from cache..."):
-                        analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
+                        # For cached data, display instantly
+                        analysis = plant_service.get_cached_analysis(plant_name)
                         st.info("💾 Loaded from cache - instant results!")
                 else:
                     with st.spinner("🌿 Fetching detailed information..."):
+                        # For new data, use streaming
                         analysis = st.write_stream(plant_service.get_analysis_stream(plant_name))
                         st.success("✅ Analysis complete and cached for future use!")
             
