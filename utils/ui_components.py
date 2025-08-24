@@ -1,8 +1,8 @@
 """
 UI Components Module
-LLM-safe parsing, clean sections, reliable images, subtle animations
+LLM-tolerant parsing, clean sections, reliable images, subtle animations
 Author: Maniwar
-Version: 4.0.0
+Version: 4.2.0
 """
 
 from __future__ import annotations
@@ -15,12 +15,12 @@ from urllib.parse import quote
 
 import requests
 import streamlit as st
-import streamlit.components.v1 as components  # for JS particles (in iframe)
+import streamlit.components.v1 as components
 from gtts import gTTS
 
 
 # =========================================================
-# Global CSS (via st.html — safe, sanitized; no model text)
+# Global CSS (only our own HTML is passed here)
 # =========================================================
 def load_custom_css() -> None:
     st.html(
@@ -33,8 +33,8 @@ def load_custom_css() -> None:
             --panel-radius:20px;
             --chip-bg: rgba(102,126,234,.12);
             --chip-br: rgba(148,163,184,.35);
-            --kv-bg: rgba(2,6,23,.20);
-            --kv-br: rgba(148,163,184,.25);
+            --panel-bg: rgba(2,6,23,.20);
+            --panel-br: rgba(148,163,184,.25);
           }
 
           .stApp { font-family:'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
@@ -72,6 +72,12 @@ def load_custom_css() -> None:
             margin:.9rem 0 .35rem 0; font-family:'Space Grotesk',sans-serif;
           }
 
+          /* Key/Value panel */
+          .kv-panel {
+            border:1px solid var(--panel-br); background:var(--panel-bg);
+            border-radius:12px; padding:.55rem .7rem; margin:.35rem 0 .75rem 0;
+          }
+
           /* Respect reduced motion */
           @media (prefers-reduced-motion: reduce) {
             .sheen, .leaf { animation: none !important; }
@@ -107,7 +113,7 @@ def render_header(
 
 
 # =========================================================
-# Optional particle background (needs JS -> iframe component)
+# Optional particle background (JS in iframe)
 # =========================================================
 def render_particles(enabled: bool = False) -> None:
     if not enabled:
@@ -127,7 +133,7 @@ def render_particles(enabled: bool = False) -> None:
                 background: { color: { value: "transparent" } },
                 fpsLimit: 45,
                 particles: {
-                  number: { value: 38, density: { enable: true, area: 800 } },
+                  number: { value: 34, density: { enable: true, area: 800 } },
                   color: { value: ["#a7f3d0", "#93c5fd", "#c4b5fd"] },
                   opacity: { value: 0.25 },
                   size: { value: { min: 1, max: 3 } },
@@ -147,7 +153,7 @@ def render_particles(enabled: bool = False) -> None:
 
 
 # =========================================================
-# Wikipedia image resolver (cache_data as this is pure data)
+# Wikipedia image resolver (cached)
 # =========================================================
 @st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
 def _wiki_summary(title: str) -> Optional[dict]:
@@ -204,9 +210,6 @@ def _normalize_plant_title(name: str) -> str:
 
 @st.cache_data(ttl=7 * 24 * 3600, show_spinner=False)
 def get_plant_image_info(plant_name: str) -> Dict[str, Optional[str]]:
-    """
-    Return {'url','caption','page_url'} using Wikipedia; neutral placeholder otherwise.
-    """
     title = _normalize_plant_title(plant_name)
     js = _wiki_summary(title)
     if not js:
@@ -224,12 +227,12 @@ def get_plant_image_info(plant_name: str) -> Dict[str, Optional[str]]:
     return {"url": f"https://picsum.photos/seed/{seed}/800/600", "caption": "Placeholder image", "page_url": None}
 
 
-def get_plant_image_url(plant_name: str) -> str:  # backward compatibility helper
+def get_plant_image_url(plant_name: str) -> str:
     return get_plant_image_info(plant_name)["url"]
 
 
 # =========================================================
-# Quick facts + clean parsing (no unsafe HTML for model text)
+# Quick facts
 # =========================================================
 def extract_quick_facts(analysis: str) -> Dict[str, str]:
     facts: Dict[str, str] = {}
@@ -265,6 +268,9 @@ def extract_quick_facts(analysis: str) -> Dict[str, str]:
     return facts
 
 
+# =========================================================
+# Robust LLM parsing
+# =========================================================
 SECTION_KEYS: List[Tuple[str, str]] = [
     ("overview", "📌"),
     ("general information", "📝"),
@@ -274,39 +280,58 @@ SECTION_KEYS: List[Tuple[str, str]] = [
     ("common issues", "🐛"),
     ("interesting facts", "💡"),
 ]
-
 _SECTION_TITLES = [k for k, _ in SECTION_KEYS]
 _SECTION_ICON = {k: icon for k, icon in SECTION_KEYS}
-_TITLE_RE = re.compile("|".join(map(re.escape, _SECTION_TITLES)), re.IGNORECASE)
+
+
+def _normalize_infix_headings(text: str) -> str:
+    """
+    LLMs sometimes cram '##' or numbered headings inline.
+    Insert a newline BEFORE any '##'/'###'/numbered/emoji+bold heading
+    that appears mid-line, so downstream regex can split properly.
+    """
+    t = text.replace("\r\n", "\n")
+
+    # Newline before '##' / '###' if not already at line start
+    t = re.sub(r"(?<!\n)(\s+##\s+)", r"\n\2", t)
+    t = re.sub(r"(?<!\n)(\s+###\s+)", r"\n\2", t)
+
+    # Newline before patterns like ' 1. Title' or ' 2) Title'
+    t = re.sub(r"(?<!\n)\s+(\d+\s*[\.\)]\s+)", r"\n\1", t)
+
+    # Newline before emoji+bold headings like ' 📌 **Common Name**'
+    t = re.sub(r"(?<!\n)\s+([📌📝🌱⚠️🌿🐛💡]\s*\*\*)", r"\n\1", t)
+
+    return t
 
 
 def _split_sections(text: str) -> List[Tuple[str, str, str]]:
     """
-    Split the LLM report into (title, icon, body) tuples using gentle heuristics.
-    Accepts headings like '## Title', 'Title:', '**Title**', or '1. Title'.
+    Split the report into (title, icon, body) tuples.
+    Accepts headings like '## Title', '**Title**', 'Title:', '1. Title', etc.
     """
-    src = text.replace("\r\n", "\n").strip()
+    src = _normalize_infix_headings(text).strip()
     if not src:
         return []
 
-    # 1) Find heading lines
-    title_pat = r"|".join(map(re.escape, _SECTION_TITLES))
+    titles = "|".join(map(re.escape, _SECTION_TITLES))
     heading_line = re.compile(
-        rf"^\s*(?:\#{{2,6}}\s*|(?:\*\*)?\s*(?:\d+\s*[\.\)]\s*)?)({title_pat})\s*:?\s*(?:\*\*)?\s*$",
+        rf"^\s*(?:\#{{2,6}}\s*|(?:\*\*)?\s*(?:\d+\s*[\.\)]\s*)?)({titles})\s*:?\s*(?:\*\*)?\s*$",
         re.IGNORECASE | re.MULTILINE,
     )
     matches = list(heading_line.finditer(src))
 
     out: List[Tuple[str, str, str]] = []
 
-    # If no headings, treat all as Overview
+    # If no headings, treat all as Overview after trimming obvious global title lines
     if not matches:
-        out.append(("Overview", "📌", src))
+        cleaned = _strip_global_title(src)
+        out.append(("Overview", "📌", cleaned))
         return out
 
-    # Intro before first heading = Overview
+    # Intro before first heading = Overview (minus global title lines)
     if matches[0].start() > 0:
-        intro = src[: matches[0].start()].strip()
+        intro = _strip_global_title(src[: matches[0].start()].strip())
         if intro:
             out.append(("Overview", "📌", intro))
 
@@ -320,6 +345,17 @@ def _split_sections(text: str) -> List[Tuple[str, str, str]]:
     return out
 
 
+def _strip_global_title(text: str) -> str:
+    """
+    Remove huge leading titles like 'Comprehensive Report on ...' so the
+    first section shows neatly.
+    """
+    t = re.sub(r"^\s*#+\s+.*$", "", text, flags=re.MULTILINE)  # drop H1/H2 lines
+    t = re.sub(r"^\s*(Comprehensive|Complete|Detailed)\s+Report.*$", "", t, flags=re.IGNORECASE | re.MULTILINE)
+    t = re.sub(r"\n{3,}", "\n\n", t).strip()
+    return t
+
+
 def _extract_blocks(body: str) -> Tuple[List[Tuple[str, str]], List[str], List[str]]:
     """
     From a section body, extract:
@@ -327,15 +363,15 @@ def _extract_blocks(body: str) -> Tuple[List[Tuple[str, str]], List[str], List[s
       - paras: list[str] of paragraph text
       - bullets: list[str] bullet items
     """
-    lines = [ln.rstrip() for ln in body.strip().split("\n") if ln.strip()]
+    # Remove duplicated first-line echoes like "1. General Information:" or "General Information:"
+    title_echo = r"^(?:\d+\s*[\.\)]\s*)?(overview|general information|care instructions|toxicity|propagation|common issues|interesting facts)\s*:?\s*$"
+    body = re.sub(title_echo, "", body, flags=re.IGNORECASE | re.MULTILINE).strip()
+
+    lines = [ln.rstrip() for ln in body.split("\n") if ln.strip()]
     kv, bullets, paras, pbuf = [], [], [], []
 
     pat_bold_kv = re.compile(r"^\s*\*\*\s*([^*\n]+?)\s*\*\*\s*:?\s*(.+)$")
-    pat_plain_kv = re.compile(r"^(?!\s*[-*]\s)([A-Z][A-Za-z0-9 \-/]{2,40})\s*:\s*(.+)$")
-
-    # Remove duplicated first-line heading echoes like "1. General Information:"
-    if lines and _TITLE_RE.search(lines[0].lower().rstrip(":")):
-        lines = lines[1:]
+    pat_plain_kv = re.compile(r"^(?!\s*[-*]\s)([A-Z][A-Za-z0-9 \-/]{2,60})\s*:\s*(.+)$")
 
     for ln in lines:
         if ln.lstrip().startswith(("-", "*")):
@@ -360,28 +396,26 @@ def _extract_blocks(body: str) -> Tuple[List[Tuple[str, str]], List[str], List[s
     return kv, paras, bullets
 
 
+def _render_kv_panel(kv: List[Tuple[str, str]]) -> None:
+    """Key/Value grid using Streamlit columns, wrapped in a subtle panel."""
+    if not kv:
+        return
+    st.html("<div class='kv-panel'></div>")  # thin border background
+    # We render rows right after; panel is just a background anchor above.
+    for k, v in kv:
+        c1, c2 = st.columns([1, 3], gap="small")
+        with c1:
+            st.markdown(f"**{k}:**")
+        with c2:
+            st.markdown(v)
+
+
 def _render_section(title: str, icon: str, body: str) -> None:
-    # Visual chip (uses our own HTML only)
     st.html(f'<div class="chip">{_html.escape(icon)} {_html.escape(title)}</div>')
-
     kv, paras, bullets = _extract_blocks(body)
-
-    # Key/Value grid using Streamlit columns (safe for model text)
-    if kv:
-        # draw a subtle panel outline using markdown (no unsafe HTML)
-        st.markdown("> _Details_")
-        for k, v in kv:
-            c1, c2 = st.columns([1, 3], gap="small")
-            with c1:
-                st.markdown(f"**{k}:**")
-            with c2:
-                st.markdown(v)
-
-    # Paragraphs
+    _render_kv_panel(kv)
     for p in paras:
         st.markdown(p)
-
-    # Bullets
     if bullets:
         st.markdown("\n".join(f"- {b}" for b in bullets))
 
@@ -397,14 +431,12 @@ def render_plant_analysis_display(
     floating_leaf: bool = True,
 ) -> None:
     """
-    Left column: image + quick facts (+ optional audio).
-    Right column: section chips + kv grid + paragraphs + bullets.
-    All model text is rendered via Streamlit elements (no raw HTML injection).
+    Left: image + quick facts (+ optional audio).
+    Right: section chips + kv grid + paragraphs + bullets.
     """
     render_particles(enabled=particles)
     render_header(show_leaf=floating_leaf)
 
-    # Bar title (safe HTML; our text only)
     st.html(f'<div class="bar-title">🌱 Analysis: {_html.escape(plant_name)}</div>')
 
     left, right = st.columns([2, 3], gap="large")
@@ -441,7 +473,7 @@ def render_plant_analysis_display(
 
     with right:
         st.markdown("#### 📋 Detailed Information")
-        sections = _split_sections(analysis) or [("Overview", "📌", analysis)]
+        sections = _split_sections(analysis) or [("Overview", "📌", _strip_global_title(analysis))]
         for title, icon, body in sections:
             _render_section(title, icon, body)
 
@@ -458,7 +490,7 @@ def render_legal_footer() -> None:
         """
         <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
              background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
-          <div>🌿 Plant Facts Explorer • Version 4.0.0</div>
+          <div>🌿 Plant Facts Explorer • Version 4.2.0</div>
           <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
         </div>
         """
