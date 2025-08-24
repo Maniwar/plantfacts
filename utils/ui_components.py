@@ -269,6 +269,7 @@ _HEADING_WORDS = [
 
 _EMOJI_BULLETS = r"[\-\*\u2022●◦▪️▫️■□☑️✅➤▶️►▸▹▻▪︎▫︎🔹🔸⭐️✨💡📌📝🌱⚠️🌿🐛🔧🔬🎯]"
 
+
 def _strip_leading_section_line(text: str, title: str) -> str:
     """
     Remove a first line like '1. General Information:' or 'General Information:' (case-insensitive).
@@ -286,41 +287,56 @@ def _strip_leading_section_line(text: str, title: str) -> str:
 
 def _normalize_subheaders(md: str) -> str:
     """
-    Normalize noisy internal headings to compact bold labels.
-    - '### Title' or deeper -> '**Title:**'
-    - '📌 **Title**' / bullet+bold -> '**Title:**'
-    - '1. **Title**' -> '**Title:**'
-    - Ensure trailing colon; collapse duplicate spaces.
+    Normalize noisy internal headings to compact bold labels INSIDE a section body.
+
+    Transforms ANY standalone heading-style line into "**Title:**":
+      - '### Title' / '#### Title' / etc.
+      - '1. Title' / '1) Title'
+      - '📌 **Title**' / '- **Title**'
+      - '**Title**' on its own line
+      - Optional trailing colon handled; emojis/bullets stripped.
+    Does NOT touch list items that have content after the heading word.
     """
-    def h_repl(m: re.Match) -> str:
-        title = m.group(1)
-        # Remove leading emojis/bullets within the captured title
+
+    # 1) Hash headings -> bold label
+    def h_repl(m):
+        title = m.group(1).strip()
         title = re.sub(rf"^{_EMOJI_BULLETS}\s*", "", title).strip()
         title = re.sub(r"[*_`#]+", "", title).strip()
         if not title.endswith(":"):
             title += ":"
         return f"**{title}**"
 
-    # ### / #### / etc -> bold labels
     md = re.sub(r"^\s*#{2,6}\s+([^\n#].*?)\s*$", h_repl, md, flags=re.MULTILINE)
 
-    # Bullet/emoji + **Heading** -> bold label
-    md = re.sub(rf"^\s*{_EMOJI_BULLETS}\s*\*\*\s*([^\*].*?)\s*\*\*\s*:?\s*$", h_repl, md, flags=re.MULTILINE)
+    # 2) Standalone numbered headings (no trailing content) -> bold label
+    md = re.sub(
+        r"^\s*\d+\s*[\.\)]\s*([A-Za-z][^\n:]{0,120}?)\s*:?\s*$",
+        lambda m: f"**{m.group(1).strip() if m.group(1).strip().endswith(':') else m.group(1).strip() + ':'}**",
+        md,
+        flags=re.MULTILINE,
+    )
 
-    # Numbered + **Heading** -> bold label
-    md = re.sub(r"^\s*\d+\s*[\.\)]\s*\*\*\s*(.*?)\s*\*\*\s*:?\s*$", h_repl, md, flags=re.MULTILINE)
+    # 3) Emoji/bullet + **Heading** (standalone) -> bold label
+    md = re.sub(
+        rf"^\s*(?:{_EMOJI_BULLETS}\s*)?\*\*\s*([^\*\n].*?)\s*\*\*\s*:?\s*$",
+        lambda m: f"**{m.group(1).strip().rstrip(':') + ':'}**",
+        md,
+        flags=re.MULTILINE,
+    )
 
-    # Plain '**Heading**' lines -> bold label with colon
-    md = re.sub(r"^\s*\*\*\s*([^\*].*?)\s*\*\*\s*$", h_repl, md, flags=re.MULTILINE)
+    # 4) Plain '**Heading**' line -> bold label
+    md = re.sub(
+        r"^\s*\*\*\s*([^\*\n].*?)\s*\*\*\s*$",
+        lambda m: f"**{m.group(1).strip().rstrip(':') + ':'}**",
+        md,
+        flags=re.MULTILINE,
+    )
 
-    # Remove accidental double asterisks around labels like '**Common Name**' already handled
-    md = re.sub(r"\*\*\s*\*\*(.*?)\*\*\s*\*\*", r"**\1**", md)
+    # 5) Remove emoji/bullet prefixes that might still precede bold labels
+    md = re.sub(rf"^\s*{_EMOJI_BULLETS}\s*(\*\*[^\n]+\*\*)\s*$", r"\1", md, flags=re.MULTILINE)
 
-    # Strip repeated numeric top-lines like '1. General Information:' anywhere
-    for word in _HEADING_WORDS:
-        md = re.sub(rf"^\s*\d+\s*[\.\)]\s*{re.escape(word)}\s*:\s*$", "", md, flags=re.IGNORECASE | re.MULTILINE)
-
-    # Collapse extra blank lines
+    # 6) Collapse extra blank lines
     md = re.sub(r"\n{3,}", "\n\n", md).strip()
     return md
 
@@ -330,60 +346,86 @@ def _normalize_subheaders(md: str) -> str:
 # =========================
 SectionStyle = Literal["markdown", "info", "warning", "success"]
 
-def _detect_section(raw: str) -> Tuple[str, str, str, SectionStyle]:
+def _detect_section(raw: str) -> tuple[str, str, str, SectionStyle]:
     """
     Given a section blob, return (icon, title, content, style).
+    More aggressive: detects headings whether bold, plain, numbered, or hash-style.
+    Strips the matched heading line from the content and also removes a duplicate
+    first line like "1. General Information:" if the LLM echoed it again.
     """
     text = raw.strip()
     lower = text.lower()
 
-    heading_patterns = [
-        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(general information)\s*:?\s*\*\*\s*', "📝", "markdown"),
-        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(care instructions)\s*:?\s*\*\*\s*', "🌱", "markdown"),
-        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(toxicity)\s*:?\s*\*\*\s*', "⚠️", "warning"),
-        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(propagation)\s*:?\s*\*\*\s*', "🌿", "markdown"),
-        (r'^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?(common issues|problems)\s*:?\s*\*\*\s*', "🐛", "markdown"),
-        (r'^\s*\*\*\s*(overview)\s*:?\s*\*\*\s*', "📌", "markdown"),
-        (r'^\s*#{2,6}\s+(overview)\s*$', "📌", "markdown"),
+    # Patterns that match a heading at the START of the blob (one line only)
+    base = r"(overview|general information|care instructions|toxicity|propagation|common issues|problems|interesting facts)"
+    heading_line_patterns = [
+        rf"^\s*\*\*\s*(?:\d+\s*[\.\)]\s*)?{base}\s*:?\s*\*\*\s*$",          # **Title**
+        rf"^\s*(?:\d+\s*[\.\)]\s*)?\s*{base}\s*:?\s*$",                      # Title or 1. Title
+        rf"^\s*#{2,6}\s+{base}\s*$",                                        # ## Title
     ]
 
-    # Bold/### heading detection
-    for pat, icon, style in heading_patterns:
-        m = re.search(pat, text, flags=re.IGNORECASE | re.MULTILINE)
+    icon_map = {
+        "overview": ("📌", "markdown"),
+        "general information": ("📝", "markdown"),
+        "care instructions": ("🌱", "markdown"),
+        "toxicity": ("⚠️", "warning"),
+        "propagation": ("🌿", "markdown"),
+        "common issues": ("🐛", "markdown"),
+        "problems": ("🐛", "markdown"),
+        "interesting facts": ("💡", "info"),
+    }
+
+    # Try to detect a leading heading line and strip it
+    for pat in heading_line_patterns:
+        m = re.match(pat, text, flags=re.IGNORECASE | re.MULTILINE)
         if m:
-            title = m.group(1).title()
-            # remove only the matched heading part (up to end of line)
-            content = text[m.end():].lstrip()
-            if "toxicity" in title.lower() and (("not toxic" in lower) or ("non-toxic" in lower) or ("non toxic" in lower)):
-                style = "success"
-            content = _strip_leading_section_line(content, title)
-            return icon, title, content, style
+            title_key = m.group(1).lower()
+            icon, style = icon_map.get(title_key, ("📌", "markdown"))
+            content = text[m.end():].lstrip("\n")
 
-    # Keyword fallback
-    for key, icon, style in [
-        ("overview", "📌", "markdown"),
-        ("general information", "📝", "markdown"),
-        ("care instructions", "🌱", "markdown"),
-        ("toxicity", "⚠️", "warning"),
-        ("propagation", "🌿", "markdown"),
-        ("common issues", "🐛", "markdown"),
-        ("problems", "🐛", "markdown"),
-        ("interesting facts", "💡", "info"),
-    ]:
+            # If toxicity says non-toxic, flip to success
+            if title_key == "toxicity" and (
+                ("not toxic" in lower) or ("non-toxic" in lower) or ("non toxic" in lower)
+            ):
+                style = "success"
+
+            # Remove a duplicated first line like "1. General Information:" or "General Information:"
+            content = re.sub(
+                rf"^\s*(?:\d+\s*[\.\)]\s*)?{re.escape(title_key)}\s*:?\s*$",
+                "",
+                content,
+                count=1,
+                flags=re.IGNORECASE | re.MULTILINE,
+            ).lstrip("\n")
+
+            return icon, title_key.title(), content, style
+
+    # Fallback: keyword presence anywhere
+    for key, (icon, style) in icon_map.items():
         if key in lower:
-            title = key.title()
-            if "toxicity" in key and (("not toxic" in lower) or ("non-toxic" in lower) or ("non toxic" in lower)):
+            content = text
+            if key == "toxicity" and (
+                ("not toxic" in lower) or ("non-toxic" in lower) or ("non toxic" in lower)
+            ):
                 style = "success"
-            text = _strip_leading_section_line(text, title)
-            return icon, title, text, style
+            # Also strip a leading line if present
+            content = re.sub(
+                rf"^\s*(?:\d+\s*[\.\)]\s*)?{re.escape(key)}\s*:?\s*$",
+                "",
+                content,
+                count=1,
+                flags=re.IGNORECASE | re.MULTILINE,
+            ).lstrip("\n")
+            return icon, key.title(), content, style
 
-    # Fallback: derive from first line
+    # Ultimate fallback: derive from first line
     first_line = text.splitlines()[0] if text else "Details"
     title = first_line.split(":")[0].strip()
     if len(title) > 60:
         title = " ".join(title.split()[:8])
-    text = _strip_leading_section_line(text, title)
-    return "📌", (title or "Details"), text, "markdown"
+    content = "\n".join(text.splitlines()[1:]).lstrip("\n") if "\n" in text else ""
+    return "📌", (title or "Details"), content or text, "markdown"
+
 
 
 # =========================
