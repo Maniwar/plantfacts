@@ -117,83 +117,148 @@ def render_header(
 # =========================================================
 def render_particles(
     enabled: bool = False,
-    plant_name: str = "",
-    height: int = 300,
-    opacity: float = 0.12,
-    show_dots: bool = True,
+    height: int = 320,
+    preset: str = "aurora",   # "aurora" | "constellation" | "leaves"
+    watermark_text: str = "AI Analysis",
+    watermark_opacity: float = 0.12,
+    intensity: float = 1.0,   # 0.5..1.5 scales motion/quantity
+    show_watermark: bool = True,
 ) -> None:
     """
-    Background visuals:
-      • Linked dot particles (optional)
-      • One large, subtle watermark with the PLANT NAME (HTML/CSS)
-    Uses unique element IDs based on the plant name, so it re-renders correctly
-    even without a 'key' parameter in older Streamlit.
+    Fancy particle backgrounds using tsParticles with three presets.
+    - No Streamlit 'key' needed; safe for older versions.
+    - Pointer-events disabled; does not block UI.
     """
     if not enabled:
         return
 
-    import json
     from streamlit.components.v1 import html as _html_iframe
+    import json
 
-    label = (plant_name or "").strip() or "Plant"
-
-    # Unique IDs to force a fresh DOM per plant (no Streamlit 'key' needed)
-    seed = abs(hash(label)) % 1_000_000
-    STAGE_ID = f"stage_{seed}"
-    TSP_ID   = f"tsp_{seed}"
-    WM_ID    = f"wm_{seed}"
-    DOT_COUNT = 34 if show_dots else 0
+    # Clamp/sanitize
+    preset = (preset or "aurora").lower().strip()
+    if preset not in {"aurora", "constellation", "leaves"}:
+        preset = "aurora"
+    intensity = max(0.4, min(1.6, float(intensity)))
+    wm = (watermark_text or "").strip() or "AI Analysis"
 
     html_code = """
     <!doctype html><html><head><meta charset="utf-8"/>
     <style>
-      :root { --wm-opacity: __OPACITY__; }
-      html,body,#__STAGE__ { margin:0; padding:0; height:100%; width:100%; background:transparent; }
-      #__STAGE__ { position:relative; pointer-events:none; }
-      #__TSP__ { position:absolute; inset:0; z-index:0; }
-      #__WM__ {
+      :root { --wm-opacity: __WM_OPACITY__; }
+      html,body,#stage { margin:0; padding:0; height:100%; width:100%; background:transparent; }
+      #stage { position:relative; pointer-events:none; }
+      #tsp { position:absolute; inset:0; z-index:0; }
+      #wm {
         position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-        font: 700 clamp(48px, 18vw, 220px) "Space Grotesk", Inter, sans-serif;
-        letter-spacing: .04em; color: #ffffff; opacity: var(--wm-opacity);
-        text-shadow: 0 2px 14px rgba(0,0,0,.25); z-index: 1; white-space: nowrap;
-        user-select: none; animation: floatSlow 18s ease-in-out infinite;
+        font: 800 clamp(42px, 16vw, 220px) "Space Grotesk", Inter, system-ui, -apple-system, sans-serif;
+        letter-spacing:.04em; color:#fff; opacity:var(--wm-opacity);
+        text-shadow:0 4px 18px rgba(0,0,0,.28); z-index:1; white-space:nowrap; user-select:none;
+        animation: floatSlow 18s ease-in-out infinite;
       }
       @keyframes floatSlow {
         0%   { transform: translate(-50%,-50%) rotate(0deg); }
         50%  { transform: translate(calc(-50% + 6px), calc(-50% - 6px)) rotate(3deg); }
         100% { transform: translate(-50%,-50%) rotate(0deg); }
       }
-      @media (prefers-reduced-motion: reduce) { #__WM__ { animation: none; } }
-    </style></head><body>
-      <div id="__STAGE__" data-plant="__LABEL__">
-        <div id="__TSP__"></div>
-        <div id="__WM__"></div>
+      @media (prefers-reduced-motion: reduce) { #wm { animation:none; } }
+    </style>
+    </head><body>
+      <div id="stage">
+        <div id="tsp"></div>
+        <div id="wm" style="display: __WM_DISPLAY__;">__WM_TEXT__</div>
       </div>
 
       <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
       <script>
         (async () => {
-          // Set watermark text
-          document.getElementById("__WM__").textContent = __LABEL__;
+          const engine = window.tsParticles;
+          const PRESET = "__PRESET__";
+          const INTENSITY = __INTENSITY__;   // scales counts & speeds
 
-          const DOT_COUNT = __DOT_COUNT__;
-          if (DOT_COUNT > 0) {
-            const engine = window.tsParticles;
-            await engine.load("__TSP__", {
-              detectRetina: true,
-              fullScreen: { enable: false },
-              background: { color: { value: "transparent" } },
-              fpsLimit: 45,
-              particles: {
-                number: { value: DOT_COUNT, density: { enable: true, area: 800 } },
-                color: { value: ["#a7f3d0", "#93c5fd", "#c4b5fd"] },
-                opacity: { value: 0.25 },
-                size: { value: { min: 1, max: 3 } },
-                move: { enable: true, speed: 0.8, outModes: { default: "out" } },
-                links: { enable: true, distance: 120, opacity: 0.12, color: "#cbd5e1" }
-              }
-            });
+          // Base colors
+          const palette = ["#a7f3d0","#93c5fd","#c4b5fd","#fde68a"];
+
+          // Build config per preset
+          let config = {
+            detectRetina: true,
+            fullScreen: { enable: false },
+            background: { color: { value: "transparent" } },
+            fpsLimit: 60,
+            particles: {},
+            interactivity: {
+              events: { resize: true },
+              modes: {}
+            }
+          };
+
+          if (PRESET === "aurora") {
+            // Flowing ribbons using trails + curved motion
+            config.particles = {
+              number: { value: Math.round(18 * INTENSITY), density: { enable: true, area: 800 } },
+              color: { value: palette },
+              opacity: { value: 0.22 },
+              size: { value: { min: 1, max: 3 } },
+              move: {
+                enable: true,
+                speed: 0.55 * INTENSITY,
+                direction: "none",
+                random: true,
+                straight: false,
+                outModes: { default: "out" },
+                trail: { enable: true, length: Math.round(14 * INTENSITY), fill: { color: "transparent" } }
+              },
+              links: { enable: false }
+            };
+            config.interactivity.events.onHover = { enable: true, mode: "attract" };
+            config.interactivity.modes.attract = { distance: 160, duration: 0.4 };
+
+          } else if (PRESET === "constellation") {
+            // Dense starfield with twinkling links
+            config.particles = {
+              number: { value: Math.round(70 * INTENSITY), density: { enable: true, area: 800 } },
+              color: { value: "#e5f0ff" },
+              opacity: { value: { min: 0.15, max: 0.55 }, animation: { enable: true, speed: 0.6, sync: false } },
+              size: { value: { min: 1, max: 2.6 } },
+              move: { enable: true, speed: 0.45 * INTENSITY, outModes: { default: "out" } },
+              links: { enable: true, distance: 140, opacity: 0.18, color: "#bcd1ff" }
+            };
+            config.interactivity.events.onHover = { enable: true, mode: "repulse" };
+            config.interactivity.modes.repulse = { distance: 120, duration: 0.3 };
+
+          } else if (PRESET === "leaves") {
+            // Drifting leaf glyphs (emoji + simple shapes)
+            config.particles = {
+              number: { value: Math.round(22 * INTENSITY), density: { enable: true, area: 800 } },
+              color: { value: ["#8ee59b","#6ee7b7","#a3e635", "#86efac"] },
+              opacity: { value: 0.28 },
+              size: { value: { min: 6, max: 12 } },
+              shape: {
+                type: ["character","circle"],
+                options: {
+                  character: [{
+                    value: "🍃",
+                    font: "Segoe UI Emoji",
+                    style: "",
+                    weight: "400"
+                  }]
+                }
+              },
+              move: {
+                enable: true,
+                speed: 0.35 * INTENSITY,
+                direction: "bottom",
+                outModes: { default: "out" },
+                drift: 0.6,
+                angle: { offset: 20, value: 40 },
+                gravity: { enable: false }
+              },
+              rotate: { value: { min: 0, max: 360 }, direction: "random", animation: { enable: true, speed: 6 } },
+              links: { enable: false }
+            };
           }
+
+          await engine.load("tsp", config);
         })();
       </script>
     </body></html>
@@ -201,17 +266,14 @@ def render_particles(
 
     _html_iframe(
         html_code
-        .replace("__LABEL__", json.dumps(label))
-        .replace("__DOT_COUNT__", str(DOT_COUNT))
-        .replace("__OPACITY__", str(opacity))
-        .replace("__STAGE__", STAGE_ID)
-        .replace("__TSP__", TSP_ID)
-        .replace("__WM__", WM_ID),
+          .replace("__PRESET__", preset)
+          .replace("__INTENSITY__", json.dumps(float(intensity)))
+          .replace("__WM_TEXT__", (wm if show_watermark else ""))
+          .replace("__WM_DISPLAY__", "block" if show_watermark else "none")
+          .replace("__WM_OPACITY__", str(watermark_opacity)),
         height=height,
         scrolling=False,
     )
-
-
 
 # =========================================================
 # Wikipedia image resolver (cached)
