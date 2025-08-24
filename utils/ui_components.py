@@ -513,6 +513,37 @@ def render_plant_analysis_display(
         for title, icon, body in sections:
             _render_section(title, icon, body)
 
+def _render_section(title: str, icon: str, body: str) -> None:
+    """
+    Render one section neatly:
+      - section chip header
+      - key/value grid
+      - paragraphs
+      - bullet lists
+    """
+    # Chip header
+    st.html(f'<div class="chip">{_html.escape(icon)} {_html.escape(title)}</div>')
+
+    # Extract content blocks
+    kv, paras, bullets = _extract_blocks(body)
+
+    # Key/Value grid
+    if kv:
+        st.html("<div class='kv-panel'></div>")
+        for k, v in kv:
+            c1, c2 = st.columns([1, 3], gap="small")
+            with c1:
+                st.markdown(f"**{k}:**")
+            with c2:
+                st.markdown(v if v else "—")
+
+    # Paragraphs
+    for p in paras:
+        st.markdown(p)
+
+    # Bullets
+    if bullets:
+        st.markdown("\n".join(f"- {b}" for b in bullets))
 
 # =========================================================
 # Public helpers
