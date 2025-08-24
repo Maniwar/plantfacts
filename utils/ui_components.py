@@ -272,17 +272,22 @@ def render_plant_analysis_display(
     plant_name: str,
     analysis: str,
     mute_audio: bool = True,
-    particles: bool = False,
+    particles: bool = True,
     floating_leaf: bool = True,
     typewriter_subtitle: bool = True,
-    allow_model_html: bool = False,   # set True if you trust model HTML
+    allow_model_html: bool = True,   # set True if you trust model HTML
+    show_header: bool = False,       # <-- default False to avoid duplicate header
 ) -> None:
     """
     Left: image + quick facts (+ optional audio).
     Right: show LLM output exactly as provided.
     """
+    # Optional background particles (safe to call multiple times; draws in an iframe)
     render_particles(enabled=particles)
-    render_header(show_leaf=floating_leaf, typewriter=typewriter_subtitle)
+
+    # Only render the big gradient header if explicitly requested
+    if show_header:
+        render_header(show_leaf=floating_leaf, typewriter=typewriter_subtitle)
 
     st.html(f'<div class="bar-title">🌱 Analysis: {_html.escape(plant_name)}</div>')
 
@@ -322,6 +327,7 @@ def render_plant_analysis_display(
             st.markdown(analysis, unsafe_allow_html=True)  # raw HTML allowed
         else:
             st.markdown(analysis)  # Markdown only (safer)
+
 
 
 # =========================================================
