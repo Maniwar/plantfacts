@@ -70,41 +70,7 @@ render_custom_css()
 # Render header
 render_header()
 
-# Show cache status at the top (no sidebar)
-with st.expander("🔧 System Status", expanded=False):
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if cache_service.is_connected():
-            st.success("✅ Cache: Connected")
-        else:
-            st.warning("⚠️ Cache: Running without caching")
-            st.caption("Redis not configured - app works but responses won't be cached")
-    
-    with col2:
-        st.info(f"📊 Version: {config.APP_VERSION}")
-    
-    with col3:
-        st.info(f"👤 Author: {config.AUTHOR}")
-    
-    # Advanced cache debug (only if connected)
-    if cache_service.is_connected():
-        with st.container():
-            st.divider()
-            test_plant = st.text_input("🔍 Check if plant is cached:", placeholder="e.g., Rose", key="cache_check")
-            if test_plant:
-                test_plant_normalized = test_plant.strip().title()
-                if plant_service.get_cached_analysis(test_plant_normalized):
-                    st.success(f"✅ '{test_plant_normalized}' is in cache")
-                    col_a, col_b = st.columns([1, 3])
-                    with col_a:
-                        if st.button("🗑️ Clear this cache entry", key="clear_cache"):
-                            cache_key = f"{config.CACHE_KEY_PREFIX}{test_plant_normalized}"
-                            if cache_service.delete(cache_key):
-                                st.info(f"Cleared cache for '{test_plant_normalized}'")
-                                st.rerun()
-                else:
-                    st.info(f"❌ '{test_plant_normalized}' not cached yet")
+
 
 # Input method selector with modern styling
 with st.container():
@@ -397,6 +363,40 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                 particles=ENABLE_PARTICLES,
                 uploaded_image_bytes=image_bytes  # Pass the captured image
             )
-
+# Show cache status at the top (no sidebar)
+with st.expander("🔧 System Status", expanded=False):
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if cache_service.is_connected():
+            st.success("✅ Cache: Connected")
+        else:
+            st.warning("⚠️ Cache: Running without caching")
+            st.caption("Redis not configured - app works but responses won't be cached")
+    
+    with col2:
+        st.info(f"📊 Version: {config.APP_VERSION}")
+    
+    with col3:
+        st.info(f"👤 Author: {config.AUTHOR}")
+    
+    # Advanced cache debug (only if connected)
+    if cache_service.is_connected():
+        with st.container():
+            st.divider()
+            test_plant = st.text_input("🔍 Check if plant is cached:", placeholder="e.g., Rose", key="cache_check")
+            if test_plant:
+                test_plant_normalized = test_plant.strip().title()
+                if plant_service.get_cached_analysis(test_plant_normalized):
+                    st.success(f"✅ '{test_plant_normalized}' is in cache")
+                    col_a, col_b = st.columns([1, 3])
+                    with col_a:
+                        if st.button("🗑️ Clear this cache entry", key="clear_cache"):
+                            cache_key = f"{config.CACHE_KEY_PREFIX}{test_plant_normalized}"
+                            if cache_service.delete(cache_key):
+                                st.info(f"Cleared cache for '{test_plant_normalized}'")
+                                st.rerun()
+                else:
+                    st.info(f"❌ '{test_plant_normalized}' not cached yet")
 # Footer
 render_legal_footer()
