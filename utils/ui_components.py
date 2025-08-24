@@ -116,69 +116,94 @@ def render_header(
 # Optional particle background (JS in iframe)
 # =========================================================
 def render_particles(enabled: bool = False, plant_name: str = "") -> None:
+    """
+    Draw a soft, centered watermark using the plant name.
+    - Single large 'char' particle (no clutter)
+    - Low opacity, slow drift
+    - Pointer-events disabled; zIndex behind app content
+    """
     if not enabled:
         return
 
-    # Use plant name as a seed so pattern is unique but stable
-    safe_seed = abs(hash(plant_name)) % (10**6) if plant_name else 42
+    label = (plant_name or "Plant").strip()
+    safe_seed = abs(hash(label)) % (10**6)
 
     components.html(
         f"""
         <!doctype html><html><head><meta charset="utf-8"/>
         <style>
-          html,body,#tsparticles {{
-            margin:0; padding:0; height:100%; width:100%; background:transparent;
-          }}
+          html,body,#tsp {{ margin:0; padding:0; height:100%; width:100%; background:transparent; }}
+          /* make sure we never block clicks */
+          #tsp { position:fixed; inset:0; pointer-events:none; z-index:0; }
         </style></head><body>
-          <div id="tsparticles"></div>
+          <div id="tsp"></div>
           <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
           <script>
             (async () => {{
               const engine = window.tsParticles;
-              await engine.load("tsparticles", {{
-                fullScreen: {{ enable: true, zIndex: 0 }},
-                background: {{ color: {{ value: "transparent" }} }},
-                fpsLimit: 45,
-                particles: {{
-                  number: {{ value: 34, density: {{ enable: true, area: 800 }} }},
-                  color: {{ value: ["#a7f3d0", "#93c5fd", "#c4b5fd"] }},
-                  opacity: {{ value: 0.25 }},
-                  size: {{ value: {{ min: 1, max: 3 }} }},
-                  move: {{ enable: true, speed: 0.8, outModes: {{ default: "out" }} }},
-                  links: {{ enable: true, distance: 120, opacity: 0.12, color: "#cbd5e1" }},
-                }},
+              // responsive font size based on viewport width/height
+              const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+              const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+              const base = Math.min(vw, vh);
+              // Big but gentle
+              const fontSize = Math.max(48, Math.min(0.18 * base, 220));
+
+              await engine.load("tsp", {{
+                autoPlay: true,
                 detectRetina: true,
-                emitters: [{{
-                  position: {{ x: 50, y: 50 }},
-                  rate: {{ delay: 5, quantity: 1 }},
-                  particles: {{
-                    move: {{ speed: 0.4, outModes: {{ default: "out" }} }},
-                    shape: {{
-                      type: "char",
-                      options: {{
-                        char: {{
-                          value: "{plant_name or '🌱'}",
-                          font: "Space Grotesk",
-                          style: "",
-                          weight: 600
-                        }}
-                      }}
-                    }},
-                    size: {{ value: 20 }},
-                    color: {{ value: "#ffffff" }},
-                    opacity: {{ value: 0.2 }},
+                fullScreen: {{ enable: false }},
+                fpsLimit: 45,
+                background: {{ color: {{ value: "transparent" }} }},
+                particles: {{
+                  number: {{ value: 1 }},
+                  move: {{
+                    enable: true,
+                    speed: 0.15,
+                    direction: "none",
+                    random: false,
+                    straight: false,
+                    drift: 0,
+                    outModes: {{ default: "out" }}
+                  }},
+                  opacity: {{
+                    value: 0.07,             // subtle
+                    animation: {{ enable: true, speed: 0.1, minimumValue: 0.04, startValue: "random" }}
+                  }},
+                  rotate: {{
+                    value: 0,
+                    direction: "random",
+                    animation: {{ enable: true, speed: 2 }}
+                  }},
+                  size: {{ value: fontSize }},
+                  color: {{ value: ["#ffffff", "#cbd5e1"] }}, // white / slate-300
+                  shape: {{
+                    type: "char",
+                    options: {{
+                      char: [{{
+                        value: "{label.replace('"', '\\"')}",
+                        font: "Space Grotesk, Inter, system-ui, -apple-system",
+                        style: "",
+                        weight: "700",
+                        fill: true
+                      }}]
+                    }}
                   }}
-                }}],
-                preset: "links",
+                }},
+                // deterministic positioning based on seed
+                manualParticles: [{{
+                  position: {{
+                    x: ( {safe_seed} % 30 ) + 35,  // 35%–65% width
+                    y: ( {safe_seed} % 30 ) + 35   // 35%–65% height
+                  }}
+                }}]
               }});
             }})();
           </script>
         </body></html>
         """,
-        height=220,
+        height=0,         # fixed/fullscreen; no extra vertical space in Streamlit layout
         scrolling=False,
     )
-
 
 
 # =========================================================
