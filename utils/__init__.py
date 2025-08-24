@@ -1,6 +1,7 @@
 """
 Utils Package
 Contains all utility modules for the Plant Facts Explorer application
+Author: Maniwar
 """
 
 # Import main components for easier access
@@ -19,8 +20,8 @@ from .ui_components import (
 )
 
 # Package metadata
-__version__ = "1.0.0"
-__author__ = "Plant Facts Explorer Team"
+__version__ = "2.0.0"
+__author__ = "Maniwar"
 
 # Define what should be imported with "from utils import *"
 __all__ = [
