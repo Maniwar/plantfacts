@@ -66,6 +66,21 @@ render_custom_css()
 # Render header
 render_header()
 
+# Particle effect selector
+particle_preset = st.selectbox(
+    "✨ Choose Particle Effect",
+    ["garden", "fireflies", "pollen", "rain", "butterflies", "bokeh"],
+    format_func=lambda x: {
+        "garden": "🌸 Garden - Leaves, petals & bokeh",
+        "fireflies": "✨ Fireflies - Magical glowing lights",
+        "pollen": "🌾 Pollen - Floating with wind",
+        "rain": "💧 Rain - Gentle rainfall",
+        "butterflies": "🦋 Butterflies - Animated wings",
+        "bokeh": "💫 Bokeh - Beautiful light orbs"
+    }[x],
+    help="Select the particle animation effect for the background"
+)
+
 # Show cache status at the top (no sidebar)
 with st.expander("🔧 System Status", expanded=False):
     col1, col2, col3 = st.columns(3)
@@ -178,7 +193,7 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
             
             # Display the formatted analysis (no uploaded image for search)
             st.divider()
-            render_plant_analysis_display(plant_name, analysis, mute_audio)
+            render_plant_analysis_display(plant_name, analysis, mute_audio, particle_preset=particle_preset)
             
         except Exception as e:
             st.error(f"❌ Error analyzing plant: {str(e)}")
@@ -257,6 +272,7 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                 plant_name, 
                 analysis, 
                 mute_audio,
+                particle_preset=particle_preset,
                 uploaded_image_bytes=image_bytes  # Pass the uploaded image
             )
 
@@ -328,6 +344,7 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                 plant_name, 
                 analysis, 
                 mute_audio,
+                particle_preset=particle_preset,
                 uploaded_image_bytes=image_bytes  # Pass the captured image
             )
 

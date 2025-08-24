@@ -2,7 +2,7 @@
 UI Components Module
 Verbatim LLM rendering + animations (leaf, sheen, typewriter), reliable images
 Author: Maniwar
-Version: 5.2.0 - Fixed particles, improved image handling
+Version: 6.0.0 - Reimagined beautiful particle effects
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from io import BytesIO
 from typing import Dict, Optional
 from urllib.parse import quote
 import hashlib
+import random
 
 import requests
 import streamlit as st
@@ -114,171 +115,371 @@ def render_header(
 
 
 # =========================================================
-# Fixed particle background with stable performance
+# Reimagined Beautiful Particle System
 # =========================================================
 def render_particles(
-    enabled: bool = False,
-    height: int = 100,
-    preset: str = "leaves",
-    watermark_text: str = "AI Analysis",
-    watermark_opacity: float = 0.12,
+    enabled: bool = True,
+    height: int = 150,
+    preset: str = "garden",  # New presets: garden, fireflies, pollen, rain, butterflies, bokeh
     intensity: float = 1.0,
-    show_watermark: bool = True,
+    interactive: bool = True,
 ) -> None:
     """
-    Fixed particle backgrounds with stable performance.
-    Prevents speed accumulation and ensures smooth animations.
+    Beautifully reimagined particle effects with nature themes.
+    
+    Presets:
+    - garden: Multi-layer garden scene with leaves, petals, and light particles
+    - fireflies: Glowing fireflies with realistic movement
+    - pollen: Floating pollen with wind effects
+    - rain: Gentle rain with splash effects
+    - butterflies: Animated butterflies
+    - bokeh: Beautiful bokeh light effects
     """
     if not enabled:
         return
 
     from streamlit.components.v1 import html as _html_iframe
     import json
-
-    # Generate unique container ID to prevent accumulation
-    container_id = f"tsp_{hash(str(st.session_state.get('particle_refresh', 0))) % 10000}"
     
-    # Clamp/sanitize
-    preset = (preset or "leaves").lower().strip()
-    if preset not in {"aurora", "constellation", "leaves"}:
-        preset = "leaves"
-    intensity = max(0.5, min(1.5, float(intensity)))
-    wm = (watermark_text or "").strip() or "AI Analysis"
-
-    # Font sizing based on height
-    if height <= 120:
-        font_css = '600 clamp(12px, 4vw, 32px)'
-    elif height <= 200:
-        font_css = '700 clamp(16px, 5vw, 48px)'
-    else:
-        font_css = '800 clamp(24px, 8vw, 96px)'
-
+    # Generate unique ID to prevent conflicts
+    container_id = f"particles_{random.randint(1000, 9999)}"
+    
+    # Validate preset
+    valid_presets = {"garden", "fireflies", "pollen", "rain", "butterflies", "bokeh"}
+    preset = preset.lower() if preset in valid_presets else "garden"
+    intensity = max(0.3, min(2.0, float(intensity)))
+    
     html_code = f"""
-    <!doctype html><html><head><meta charset="utf-8"/>
-    <style>
-      :root {{ --wm-opacity: {watermark_opacity}; }}
-      html,body,#stage {{ margin:0; padding:0; height:100%; width:100%; background:transparent; overflow:hidden; }}
-      #stage {{ position:relative; pointer-events:none; }}
-      #{container_id} {{ position:absolute; inset:0; z-index:0; }}
-      #wm {{
-        position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-        font: {font_css} "Space Grotesk", Inter, system-ui, -apple-system, sans-serif;
-        letter-spacing:.03em; color:#fff; opacity:var(--wm-opacity);
-        text-shadow:0 2px 8px rgba(0,0,0,.25); z-index:1; white-space:nowrap; user-select:none;
-        animation: floatSlow 18s ease-in-out infinite;
-      }}
-      @keyframes floatSlow {{
-        0%, 100% {{ transform: translate(-50%,-50%) rotate(0deg); }}
-        50% {{ transform: translate(calc(-50% + 6px), calc(-50% - 6px)) rotate(3deg); }}
-      }}
-      @media (prefers-reduced-motion: reduce) {{ #wm {{ animation:none; }} }}
-    </style>
-    </head><body>
-      <div id="stage">
-        <div id="{container_id}"></div>
-        {'<div id="wm">' + _html.escape(wm) + '</div>' if show_watermark else ''}
-      </div>
-
-      <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
-      <script>
-        (async () => {{
-          // Clear any existing instances to prevent accumulation
-          if (window.tsParticlesInstance) {{
-            window.tsParticlesInstance.destroy();
-          }}
-          
-          const engine = window.tsParticles;
-          const PRESET = "{preset}";
-          const INTENSITY = {json.dumps(float(intensity))};
-
-          const palette = ["#a7f3d0","#93c5fd","#c4b5fd","#fde68a"];
-          let config = {{
-            detectRetina: true,
-            fullScreen: {{ enable: false }},
-            background: {{ color: {{ value: "transparent" }} }},
-            fpsLimit: 60,
-            particles: {{}},
-            interactivity: {{ events: {{ resize: true }}, modes: {{}} }}
-          }};
-
-          if (PRESET === "aurora") {{
-            config.particles = {{
-              number: {{ value: Math.round(15 * INTENSITY), density: {{ enable: true, area: 800 }} }},
-              color: {{ value: palette }},
-              opacity: {{ value: 0.22 }},
-              size: {{ value: {{ min: 1, max: 3 }} }},
-              move: {{
-                enable: true,
-                speed: 0.4 * INTENSITY,
-                random: true,
-                straight: false,
-                outModes: {{ default: "out" }},
-                trail: {{ enable: true, length: Math.round(10 * INTENSITY), fill: {{ color: "transparent" }} }}
-              }},
-              links: {{ enable: false }}
-            }};
-            config.interactivity.events.onHover = {{ enable: false }};
-          }} 
-          else if (PRESET === "constellation") {{
-            config.particles = {{
-              number: {{ value: Math.round(50 * INTENSITY), density: {{ enable: true, area: 800 }} }},
-              color: {{ value: "#e5f0ff" }},
-              opacity: {{ value: {{ min: 0.15, max: 0.55 }}, animation: {{ enable: true, speed: 0.5, sync: false }} }},
-              size: {{ value: {{ min: 1, max: 2.5 }} }},
-              move: {{ 
-                enable: true, 
-                speed: 0.3 * INTENSITY, 
-                direction: "none",
-                random: false,
-                straight: false,
-                outModes: {{ default: "out" }} 
-              }},
-              links: {{ 
-                enable: true, 
-                distance: 140, 
-                opacity: 0.18, 
-                color: "#bcd1ff",
-                width: 1
-              }}
-            }};
-            config.interactivity.events.onHover = {{ enable: false }};
-          }} 
-          else if (PRESET === "leaves") {{
-            config.particles = {{
-              number: {{ value: Math.round(18 * INTENSITY), density: {{ enable: true, area: 800 }} }},
-              color: {{ value: ["#8ee59b","#6ee7b7","#a3e635", "#86efac"] }},
-              opacity: {{ value: 0.35 }},
-              size: {{ value: {{ min: 8, max: 14 }} }},
-              shape: {{
-                type: ["character"],
-                options: {{ character: [{{ value: "🍃", font: "Segoe UI Emoji" }}] }}
-              }},
-              move: {{
-                enable: true,
-                speed: 0.8 * INTENSITY,
-                direction: "bottom-right",
-                random: false,
-                straight: false,
-                outModes: {{ default: "out" }},
-                gravity: {{ enable: true, acceleration: 0.5 }}
-              }},
-              rotate: {{ 
-                value: {{ min: 0, max: 360 }}, 
-                direction: "random",
-                animation: {{ enable: true, speed: 5, sync: false }} 
-              }},
-              wobble: {{ enable: true, distance: 10, speed: 10 }},
-              links: {{ enable: false }}
-            }};
-          }}
-
-          // Store instance globally for cleanup
-          window.tsParticlesInstance = await engine.load("{container_id}", config);
-        }})();
-      </script>
-    </body></html>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ 
+                margin: 0; 
+                padding: 0; 
+                overflow: hidden; 
+                background: transparent;
+            }}
+            #canvas {{
+                display: block;
+                width: 100%;
+                height: 100vh;
+                cursor: crosshair;
+            }}
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script>
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            let width = canvas.width = window.innerWidth;
+            let height = canvas.height = window.innerHeight;
+            let mouseX = width / 2;
+            let mouseY = height / 2;
+            let particles = [];
+            let frame = 0;
+            
+            const PRESET = "{preset}";
+            const INTENSITY = {intensity};
+            const INTERACTIVE = {str(interactive).lower()};
+            
+            // Handle resize
+            window.addEventListener('resize', () => {{
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }});
+            
+            // Mouse tracking
+            if (INTERACTIVE) {{
+                canvas.addEventListener('mousemove', (e) => {{
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                }});
+            }}
+            
+            // Utility functions
+            const random = (min, max) => Math.random() * (max - min) + min;
+            const distance = (x1, y1, x2, y2) => Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+            
+            // Particle class
+            class Particle {{
+                constructor(config) {{
+                    Object.assign(this, config);
+                    this.reset();
+                }}
+                
+                reset() {{
+                    this.x = random(0, width);
+                    this.y = random(-100, height);
+                    this.size = this.baseSize * random(0.5, 1.5);
+                    this.speedX = random(-0.5, 0.5) * INTENSITY;
+                    this.speedY = random(0.2, 1) * INTENSITY;
+                    this.opacity = 0;
+                    this.targetOpacity = random(0.3, 1);
+                    this.rotation = random(0, Math.PI * 2);
+                    this.rotationSpeed = random(-0.02, 0.02);
+                    this.life = 0;
+                    this.maxLife = random(200, 400);
+                    this.offsetX = random(-50, 50);
+                    this.offsetY = random(-50, 50);
+                }}
+                
+                update() {{
+                    // Fade in/out
+                    if (this.life < 20) {{
+                        this.opacity = (this.life / 20) * this.targetOpacity;
+                    }} else if (this.life > this.maxLife - 20) {{
+                        this.opacity = ((this.maxLife - this.life) / 20) * this.targetOpacity;
+                    }} else {{
+                        this.opacity = this.targetOpacity;
+                    }}
+                    
+                    // Movement
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    this.rotation += this.rotationSpeed;
+                    this.life++;
+                    
+                    // Reset if needed
+                    if (this.life > this.maxLife || this.y > height + 100) {{
+                        this.reset();
+                    }}
+                    
+                    // Mouse interaction
+                    if (INTERACTIVE && this.interactive !== false) {{
+                        const dist = distance(this.x, this.y, mouseX, mouseY);
+                        if (dist < 100) {{
+                            const angle = Math.atan2(this.y - mouseY, this.x - mouseX);
+                            const force = (100 - dist) / 100 * 2;
+                            this.x += Math.cos(angle) * force;
+                            this.y += Math.sin(angle) * force;
+                        }}
+                    }}
+                }}
+                
+                draw() {{
+                    ctx.save();
+                    ctx.globalAlpha = this.opacity;
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation);
+                    
+                    if (this.type === 'leaf') {{
+                        // Draw leaf shape
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }} else if (this.type === 'petal') {{
+                        // Draw petal shape
+                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+                        gradient.addColorStop(0, this.color);
+                        gradient.addColorStop(1, this.color2 || this.color);
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.ellipse(0, 0, this.size * 0.8, this.size * 1.2, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }} else if (this.type === 'firefly') {{
+                        // Glowing firefly
+                        const pulse = Math.sin(frame * 0.05 + this.offsetX) * 0.3 + 0.7;
+                        ctx.shadowBlur = this.size * 3 * pulse;
+                        ctx.shadowColor = this.color;
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.size * pulse, 0, Math.PI * 2);
+                        ctx.fill();
+                    }} else if (this.type === 'rain') {{
+                        // Rain drop
+                        ctx.strokeStyle = this.color;
+                        ctx.lineWidth = this.size;
+                        ctx.lineCap = 'round';
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(0, this.size * 10);
+                        ctx.stroke();
+                    }} else if (this.type === 'butterfly') {{
+                        // Animated butterfly
+                        const wing = Math.sin(frame * 0.1 + this.offsetX) * 0.5 + 0.5;
+                        ctx.fillStyle = this.color;
+                        // Left wing
+                        ctx.beginPath();
+                        ctx.ellipse(-this.size * wing, 0, this.size, this.size * 0.7, -0.3, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Right wing
+                        ctx.beginPath();
+                        ctx.ellipse(this.size * wing, 0, this.size, this.size * 0.7, 0.3, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Body
+                        ctx.fillStyle = '#4a4a4a';
+                        ctx.fillRect(-2, -this.size * 0.5, 4, this.size);
+                    }} else if (this.type === 'bokeh') {{
+                        // Bokeh light effect
+                        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+                        gradient.addColorStop(0, this.color);
+                        gradient.addColorStop(0.4, this.color + '88');
+                        gradient.addColorStop(1, 'transparent');
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }} else {{
+                        // Default circle
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }}
+                    
+                    ctx.restore();
+                }}
+            }}
+            
+            // Initialize particles based on preset
+            function initParticles() {{
+                particles = [];
+                
+                if (PRESET === 'garden') {{
+                    // Multi-layer garden scene
+                    // Background bokeh lights
+                    for (let i = 0; i < 15 * INTENSITY; i++) {{
+                        particles.push(new Particle({{
+                            type: 'bokeh',
+                            baseSize: random(20, 40),
+                            color: random(0, 1) > 0.5 ? 'rgba(255, 223, 186, 0.3)' : 'rgba(186, 255, 201, 0.3)',
+                            speedY: 0.1,
+                            interactive: false
+                        }}));
+                    }}
+                    // Falling leaves
+                    for (let i = 0; i < 8 * INTENSITY; i++) {{
+                        particles.push(new Particle({{
+                            type: 'leaf',
+                            baseSize: random(8, 15),
+                            color: ['#8ee59b', '#6ee7b7', '#a3e635', '#86efac'][Math.floor(random(0, 4))],
+                            speedY: 0.8
+                        }}));
+                    }}
+                    // Floating petals
+                    for (let i = 0; i < 12 * INTENSITY; i++) {{
+                        particles.push(new Particle({{
+                            type: 'petal',
+                            baseSize: random(6, 12),
+                            color: 'rgba(255, 182, 193, 0.8)',
+                            color2: 'rgba(255, 105, 180, 0.6)',
+                            speedY: 0.5
+                        }}));
+                    }}
+                }} else if (PRESET === 'fireflies') {{
+                    // Magical fireflies
+                    for (let i = 0; i < 25 * INTENSITY; i++) {{
+                        particles.push(new Particle({{
+                            type: 'firefly',
+                            baseSize: random(2, 4),
+                            color: ['#fff59d', '#ffeb3b', '#fffde7'][Math.floor(random(0, 3))],
+                            speedX: random(-1, 1),
+                            speedY: random(-0.5, 0.5)
+                        }}));
+                    }}
+                }} else if (PRESET === 'pollen') {{
+                    // Floating pollen with wind
+                    for (let i = 0; i < 40 * INTENSITY; i++) {{
+                        particles.push(new Particle({{
+                            type: 'circle',
+                            baseSize: random(1, 3),
+                            color: 'rgba(255, 235, 59, 0.6)',
+                            speedX: Math.sin(frame * 0.01) * 2,
+                            speedY: 0.3
+                        }}));
+                    }}
+                }} else if (PRESET === 'rain') {{
+                    // Gentle rain
+                    for (let i = 0; i < 50 * INTENSITY; i++) {{
+                        particles.push(new Particle({{
+                            type: 'rain',
+                            baseSize: random(0.5, 1.5),
+                            color: 'rgba(174, 213, 255, 0.6)',
+                            speedY: random(8, 12),
+                            interactive: false
+                        }}));
+                    }}
+                }} else if (PRESET === 'butterflies') {{
+                    // Animated butterflies
+                    const colors = ['#ff9800', '#e91e63', '#9c27b0', '#2196f3', '#4caf50'];
+                    for (let i = 0; i < 10 * INTENSITY; i++) {{
+                        particles.push(new Particle({{
+                            type: 'butterfly',
+                            baseSize: random(8, 15),
+                            color: colors[Math.floor(random(0, colors.length))],
+                            speedX: random(-1, 1),
+                            speedY: random(-0.5, 0.3)
+                        }}));
+                    }}
+                }} else if (PRESET === 'bokeh') {{
+                    // Beautiful bokeh lights
+                    const colors = [
+                        'rgba(255, 193, 7, 0.4)',
+                        'rgba(76, 175, 80, 0.4)',
+                        'rgba(3, 169, 244, 0.4)',
+                        'rgba(233, 30, 99, 0.4)',
+                        'rgba(156, 39, 176, 0.4)'
+                    ];
+                    for (let i = 0; i < 20 * INTENSITY; i++) {{
+                        particles.push(new Particle({{
+                            type: 'bokeh',
+                            baseSize: random(10, 50),
+                            color: colors[Math.floor(random(0, colors.length))],
+                            speedX: random(-0.3, 0.3),
+                            speedY: random(-0.3, 0.3),
+                            interactive: true
+                        }}));
+                    }}
+                }}
+            }}
+            
+            // Animation loop
+            function animate() {{
+                // Create trail effect for some presets
+                if (PRESET === 'fireflies' || PRESET === 'bokeh') {{
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                    ctx.fillRect(0, 0, width, height);
+                }} else {{
+                    ctx.clearRect(0, 0, width, height);
+                }}
+                
+                // Update and draw particles
+                particles.forEach(particle => {{
+                    particle.update();
+                    particle.draw();
+                }});
+                
+                // Add wind effect for some presets
+                if (PRESET === 'pollen' || PRESET === 'garden') {{
+                    particles.forEach(particle => {{
+                        particle.speedX = Math.sin(frame * 0.01 + particle.offsetX * 0.01) * 0.5 * INTENSITY;
+                    }});
+                }}
+                
+                frame++;
+                requestAnimationFrame(animate);
+            }}
+            
+            // Start animation
+            initParticles();
+            animate();
+            
+            // Reinitialize on preset change (for development)
+            window.addEventListener('message', (e) => {{
+                if (e.data && e.data.type === 'reinit') {{
+                    initParticles();
+                }}
+            }});
+        </script>
+    </body>
+    </html>
     """
-
+    
     _html_iframe(html_code, height=height, scrolling=False)
 
 
@@ -517,11 +718,12 @@ def render_plant_analysis_display(
     analysis: str,
     mute_audio: bool = True,
     particles: bool = True,
+    particle_preset: str = "garden",  # New parameter for particle preset
     floating_leaf: bool = True,
     typewriter_subtitle: bool = True,
     allow_model_html: bool = True,
     show_header: bool = False,
-    uploaded_image_bytes: Optional[bytes] = None,  # New parameter for uploaded/captured images
+    uploaded_image_bytes: Optional[bytes] = None,
 ) -> None:
     """
     Left: image + quick facts (+ optional audio).
@@ -529,9 +731,15 @@ def render_plant_analysis_display(
     
     Args:
         uploaded_image_bytes: If provided, use this image instead of searching for one
+        particle_preset: Choose from 'garden', 'fireflies', 'pollen', 'rain', 'butterflies', 'bokeh'
     """
-    # Optional background particles
-    render_particles(enabled=particles, preset="leaves", intensity=1.0)
+    # Render beautiful particles
+    render_particles(
+        enabled=particles, 
+        preset=particle_preset,
+        intensity=1.0,
+        interactive=True
+    )
 
     # Only render the big gradient header if explicitly requested
     if show_header:
@@ -593,7 +801,7 @@ def render_legal_footer() -> None:
         """
         <div style="margin-top:2rem;padding:1.2rem;text-align:center;border-radius:16px;
              background:linear-gradient(135deg,#1e293b,#334155);color:#fff;">
-          <div>🌿 Plant Facts Explorer • Version 5.2.0</div>
+          <div>🌿 Plant Facts Explorer • Version 6.0.0</div>
           <div style="opacity:.8;font-size:.9rem;">© 2024 • Powered by OpenAI & Streamlit</div>
         </div>
         """
