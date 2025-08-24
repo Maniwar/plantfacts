@@ -21,18 +21,20 @@ if 'initialized' not in st.session_state:
     st.cache_resource.clear()
     st.session_state.initialized = True
 
-# Import modules after clearing cache
+# Import streamlit_searchbox first
+from streamlit_searchbox import st_searchbox
+
+# Import utils modules directly
 from utils.config import AppConfig
+from utils.cache_service import CacheService
+from utils.plant_service import PlantService
+from utils.search_service import get_search_suggestions
 from utils.ui_components import (
     render_header,
     render_custom_css,
     render_plant_analysis_display,
     render_legal_footer
 )
-from utils.plant_service import PlantService
-from utils.search_service import get_search_suggestions
-from utils.cache_service import CacheService
-from streamlit_searchbox import st_searchbox
 
 # Initialize configuration
 config = AppConfig()
