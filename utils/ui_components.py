@@ -2,16 +2,21 @@
 UI Components Module
 Reusable UI components with better image handling and improved UX
 Author: Maniwar
-Version: 2.5.0 - Better images and expanded sections for better UX
+Version: 2.6.0 - Section titles next to icons + polish
 """
 
-import streamlit as st
 import re
-from gtts import gTTS
-from io import BytesIO
-from typing import Dict, Optional
 import urllib.parse
+from io import BytesIO
+from typing import Dict
 
+import streamlit as st
+from gtts import gTTS
+
+
+# ---------------------------
+# Global CSS / Theming
+# ---------------------------
 def load_custom_css():
     """
     Load custom CSS with dark theme support
@@ -268,6 +273,7 @@ def load_custom_css():
     """
     st.markdown(css, unsafe_allow_html=True)
 
+
 def render_header():
     """
     Render beautiful application header
@@ -275,9 +281,7 @@ def render_header():
     header_html = """
     <div class="header-container">
         <div class="header-content">
-            <div class="header-icon">
-                🌿
-            </div>
+            <div class="header-icon">🌿</div>
             <div class="header-text">
                 <h1>Plant Facts Explorer</h1>
                 <p>Discover the amazing world of plants with AI-powered insights</p>
@@ -287,28 +291,16 @@ def render_header():
     """
     st.markdown(header_html, unsafe_allow_html=True)
 
+
+# ---------------------------
+# Media helpers
+# ---------------------------
 def get_plant_image_url(plant_name: str) -> str:
     """
     Get a reliable plant image URL using multiple fallback sources
     """
-    # Clean the plant name for URL
     clean_name = urllib.parse.quote(plant_name.lower())
-    
-    # List of image sources to try (in order of preference)
-    image_sources = [
-        # 1. Pexels (reliable, high quality)
-        f"https://images.pexels.com/photos/1407305/pexels-photo-1407305.jpeg?auto=compress&cs=tinysrgb&w=800",  # Generic beautiful plant
-        
-        # 2. Picsum (Lorem Picsum - always works)
-        f"https://picsum.photos/seed/{clean_name}/800/600",
-        
-        # 3. Unsplash with specific collection
-        f"https://source.unsplash.com/800x600/?{clean_name},plant,flower,botanical",
-        
-        # 4. Generic plant image from Pexels
-        "https://images.pexels.com/photos/1072179/pexels-photo-1072179.jpeg?auto=compress&cs=tinysrgb&w=800"
-    ]
-    
+
     # For common plants, use specific known good images
     common_plants = {
         "rose": "https://images.pexels.com/photos/56866/garden-rose-red-pink-56866.jpeg?auto=compress&cs=tinysrgb&w=800",
@@ -320,113 +312,175 @@ def get_plant_image_url(plant_name: str) -> str:
         "tulip": "https://images.pexels.com/photos/54332/tulip-flower-blossom-bloom-54332.jpeg?auto=compress&cs=tinysrgb&w=800",
         "sunflower": "https://images.pexels.com/photos/46216/sunflower-flowers-bright-yellow-46216.jpeg?auto=compress&cs=tinysrgb&w=800",
         "lavender": "https://images.pexels.com/photos/207518/pexels-photo-207518.jpeg?auto=compress&cs=tinysrgb&w=800",
-        "bamboo": "https://images.pexels.com/photos/279321/pexels-photo-279321.jpeg?auto=compress&cs=tinysrgb&w=800"
+        "bamboo": "https://images.pexels.com/photos/279321/pexels-photo-279321.jpeg?auto=compress&cs=tinysrgb&w=800",
     }
-    
-    # Check if we have a specific image for this plant
+
     for key, url in common_plants.items():
         if key in plant_name.lower():
             return url
-    
-    # Use Picsum as reliable fallback with seed based on plant name
+
+    # Picsum as reliable fallback with a seed based on plant name
     return f"https://picsum.photos/seed/{clean_name}/800/600"
+
 
 def extract_quick_facts(analysis: str) -> Dict[str, str]:
     """
     Extract quick facts from plant analysis
     """
-    facts = {}
+    facts: Dict[str, str] = {}
     analysis_lower = analysis.lower()
-    
+
     # Toxicity check with better icons
     if "toxic" in analysis_lower:
-        if "not toxic" in analysis_lower or "non-toxic" in analysis_lower:
+        if ("not toxic" in analysis_lower) or ("non-toxic" in analysis_lower) or ("non toxic" in analysis_lower):
             facts["Safety"] = "Pet Safe ✅"
         else:
             facts["Safety"] = "Toxic ⚠️"
-    
+
     # Light requirements with icons
     light_icons = {
         "full sun": "☀️ Full Sun",
         "partial shade": "⛅ Partial",
         "full shade": "🌙 Shade",
         "bright indirect": "💡 Bright",
-        "low light": "🔅 Low Light"
+        "low light": "🔅 Low Light",
     }
-    
     for pattern, display in light_icons.items():
         if pattern in analysis_lower:
             facts["Light"] = display
             break
-    
+
     # Watering with icons
     water_icons = {
         "daily": "💧 Daily",
         "weekly": "💦 Weekly",
         "moderate": "💧 Moderate",
-        "drought": "🌵 Minimal"
+        "drought": "🌵 Minimal",
     }
-    
     for pattern, display in water_icons.items():
         if pattern in analysis_lower:
             facts["Water"] = display
             break
-    
+
     # Origin with flag emoji (simplified)
-    origin_match = re.search(r'native to ([^,\.]+)', analysis_lower)
+    origin_match = re.search(r"native to ([^,\.]+)", analysis_lower)
     if origin_match:
         origin = origin_match.group(1).title()
         facts["Origin"] = f"🌍 {origin}"
-    
+
     return facts
+
 
 def clean_text_for_tts(text: str) -> str:
     """
     Clean text for text-to-speech conversion
     """
-    text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-    text = re.sub(r'\#\#(.*?)\n', r'\1. ', text)
-    text = re.sub(r'\#(.*?)\n', r'\1. ', text)
-    text = re.sub(r'\* (.*?)\n', r'\1. ', text)
-    text = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', text)
-    text = text.replace('|', ', ').replace('-', ' ').replace('`', '')
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"\#\#(.*?)\n", r"\1. ", text)
+    text = re.sub(r"\#(.*?)\n", r"\1. ", text)
+    text = re.sub(r"\* (.*?)\n", r"\1. ", text)
+    text = re.sub(r"\[(.*?)\]\(.*?\)", r"\1", text)
+    text = text.replace("|", ", ").replace("-", " ").replace("`", "")
     return text
 
+
+# ---------------------------
+# Section parsing (NEW)
+# ---------------------------
+def _parse_section_meta(section: str):
+    """
+    Return (icon, title, content, style) for a section.
+    style ∈ {"markdown","info","warning","success"} to control how we render.
+    """
+    raw = section.strip()
+    lower = raw.lower()
+
+    # Known headings: **1. General Information:**, **Care Instructions**, etc.
+    heading_patterns = [
+        (r'^\s*\*\*\s*(?:\d+\.\s*)?(general information)\s*:?\s*\*\*\s*', "📝", "markdown"),
+        (r'^\s*\*\*\s*(?:\d+\.\s*)?(care instructions)\s*:?\s*\*\*\s*', "🌱", "markdown"),
+        (r'^\s*\*\*\s*(?:\d+\.\s*)?(toxicity)\s*:?\s*\*\*\s*', "⚠️", "warning"),  # may flip to success below
+        (r'^\s*\*\*\s*(?:\d+\.\s*)?(propagation)\s*:?\s*\*\*\s*', "🌿", "markdown"),
+        (r'^\s*\*\*\s*(?:\d+\.\s*)?(common issues|problems)\s*:?\s*\*\*\s*', "🐛", "markdown"),
+        (r'^\s*\*\*\s*(?:\d+\.\s*)?(interesting facts)\s*:?\s*\*\*\s*', "💡", "info"),
+    ]
+
+    for pat, icon, style in heading_patterns:
+        m = re.search(pat, raw, flags=re.IGNORECASE)
+        if m:
+            title = m.group(1).title()
+            content = raw[m.end():].strip()
+            # Toxicity: flip to success if clearly non-toxic
+            if "toxicity" in title.lower():
+                if ("not toxic" in lower) or ("non-toxic" in lower) or ("non toxic" in lower):
+                    style = "success"
+            return icon, title, content, style
+
+    # No bold heading found — keyword fallback
+    keyword_map = [
+        ("general information", "📝", "markdown"),
+        ("care instructions", "🌱", "markdown"),
+        ("toxicity", "⚠️", "warning"),
+        ("propagation", "🌿", "markdown"),
+        ("common issues", "🐛", "markdown"),
+        ("problems", "🐛", "markdown"),
+        ("interesting facts", "💡", "info"),
+    ]
+    for key, icon, style in keyword_map:
+        if key in lower:
+            title = key.title()
+            if "toxicity" in key:
+                if ("not toxic" in lower) or ("non-toxic" in lower) or ("non toxic" in lower):
+                    style = "success"
+            return icon, title, raw, style
+
+    # Ultimate fallback: use first line/snippet as a title
+    first_line = raw.splitlines()[0] if raw else "Details"
+    title = first_line.split(":")[0].strip()
+    if len(title) > 60:
+        title = " ".join(title.split()[:8])
+    return "📌", (title or "Details"), raw, "markdown"
+
+
+# ---------------------------
+# Main renderer
+# ---------------------------
 def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bool = True):
     """
     Render beautiful plant analysis display with better UX (expanded sections)
     """
-    # Main container with nice styling
     with st.container():
         # Beautiful header for analysis
-        st.markdown(f"""
-        <div class="analysis-header">
-            <span>🌱</span>
-            <span>Analysis: {plant_name}</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
+        st.markdown(
+            f"""
+            <div class="analysis-header">
+                <span>🌱</span>
+                <span>Analysis: {plant_name}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         # Create responsive columns
         col1, col2 = st.columns([2, 3], gap="large")
-        
+
         with col1:
             # Plant image with reliable source
             image_url = get_plant_image_url(plant_name)
             st.image(image_url, caption=f"🌿 {plant_name}", use_container_width=True)
-            
+
             # Quick Facts with beautiful cards
             st.markdown("### ⭐ Quick Facts")
             facts = extract_quick_facts(analysis)
-            
+
             if facts:
                 # Create a 2-column grid for metrics
                 fact_cols = st.columns(2)
                 for i, (label, value) in enumerate(facts.items()):
                     with fact_cols[i % 2]:
-                        # Use container for better styling
                         with st.container():
                             st.metric(label=label, value=value)
-            
+
             # Audio section (if not muted)
             if not mute_audio:
                 st.markdown("### 🔊 Audio Guide")
@@ -434,98 +488,81 @@ def render_plant_analysis_display(plant_name: str, analysis: str, mute_audio: bo
                     try:
                         clean_analysis = clean_text_for_tts(analysis)
                         audio_stream = BytesIO()
-                        tts = gTTS(text=clean_analysis, lang='en')
+                        tts = gTTS(text=clean_analysis, lang="en")
                         tts.write_to_fp(audio_stream)
                         st.audio(audio_stream, format="audio/mpeg")
                     except Exception as e:
                         st.warning(f"Audio unavailable: {str(e)}")
-        
+
         with col2:
             # Detailed analysis - EXPANDED BY DEFAULT for better UX
             st.markdown("### 📋 Detailed Information")
-            
-            # Parse and display sections - ALL EXPANDED for better UX
-            sections = analysis.split('\n\n')
-            
-            for section in sections:
-                if section.strip():
-                    section_lower = section.lower()
-                    
-                    # Format each section type - ALL EXPANDED=TRUE
-                    if any(x in section_lower for x in ["general information", "**1."]):
-                        with st.expander("📝", expanded=True):
-                            content = re.sub(r'\*\*(?:1\.|General Information:?)\*\*:?\s*', '', section)
-                            st.markdown(content)
-                    
-                    elif any(x in section_lower for x in ["care instructions", "**2."]):
-                        with st.expander("🌱", expanded=True):
-                            content = re.sub(r'\*\*(?:2\.|Care Instructions:?)\*\*:?\s*', '', section)
-                            st.markdown(content)
-                    
-                    elif any(x in section_lower for x in ["toxicity", "**3."]):
-                        is_toxic = "toxic" in section_lower and "not toxic" not in section_lower
-                        with st.expander("⚠️", expanded=True):
-                            content = re.sub(r'\*\*(?:3\.|Toxicity:?)\*\*:?\s*', '', section)
-                            if is_toxic:
-                                st.warning(content)
-                            else:
-                                st.success(content)
-                    
-                    elif any(x in section_lower for x in ["propagation", "**4."]):
-                        with st.expander("🌿", expanded=True):
-                            content = re.sub(r'\*\*(?:4\.|Propagation:?)\*\*:?\s*', '', section)
-                            st.markdown(content)
-                    
-                    elif any(x in section_lower for x in ["common issues", "problems", "**5."]):
-                        # This one can stay collapsed as it's less critical
-                        with st.expander("🐛", expanded=False):
-                            content = re.sub(r'\*\*(?:5\.|Common Issues:?)\*\*:?\s*', '', section)
-                            st.markdown(content)
-                    
-                    elif any(x in section_lower for x in ["interesting facts", "**6."]):
-                        with st.expander("💡 Interesting Facts", expanded=True):
-                            content = re.sub(r'\*\*(?:6\.|Interesting Facts:?)\*\*:?\s*', '', section)
-                            st.info(content)
-                    
-                    else:
-                        # Other sections - expanded if substantial
-                        if section.strip() and len(section.strip()) > 20:
-                            with st.expander("📌", expanded=True):
-                                st.markdown(section)
 
+            # Robust section splitting (preserve lists/paragraphs within sections)
+            # Splits on 2+ newlines
+            sections = re.split(r"\n{2,}", analysis.strip())
+
+            for section in sections:
+                if not section.strip():
+                    continue
+
+                icon, title, content, style = _parse_section_meta(section)
+                label = f"{icon} {title}"
+
+                with st.expander(label, expanded=True):
+                    if style == "warning":
+                        st.warning(content)
+                    elif style == "success":
+                        st.success(content)
+                    elif style == "info":
+                        st.info(content)
+                    else:
+                        st.markdown(content)
+
+
+# ---------------------------
+# Public helpers
+# ---------------------------
 def render_custom_css():
     """Apply beautiful custom CSS styles with dark theme support"""
     load_custom_css()
 
+
 def render_legal_footer():
     """Render beautiful legal disclaimer and footer"""
     st.divider()
-    
+
     with st.expander("📜 Legal & Privacy Information"):
-        st.markdown("""
-        ### Legal Disclaimer
-        This application provides plant information for educational purposes only. 
-        Always consult professionals for plant care and safety advice.
-        
-        ### Privacy Policy
-        - We only collect plant search queries
-        - Data may be cached for performance
-        - No personal information is stored
-        - OpenAI processes plant analysis requests
-        
-        ### Copyright
-        © 2024 Plant Facts Explorer by Maniwar
-        Released under MIT License
-        """)
-    
+        st.markdown(
+            """
+            ### Legal Disclaimer
+            This application provides plant information for educational purposes only. 
+            Always consult professionals for plant care and safety advice.
+            
+            ### Privacy Policy
+            - We only collect plant search queries
+            - Data may be cached for performance
+            - No personal information is stored
+            - OpenAI processes plant analysis requests
+            
+            ### Copyright
+            © 2024 Plant Facts Explorer by Maniwar
+            Released under MIT License
+            """
+        )
+
     # Beautiful footer
-    st.markdown("""
-    <div class="footer-container">
-        <h3>🌿 Plant Facts Explorer</h3>
-        <p>Made with ❤️ by Maniwar • Version 2.5.0</p>
-        <p style="opacity: 0.8; font-size: 0.9rem;">© 2024 • Powered by OpenAI & Streamlit</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="footer-container">
+            <h3>🌿 Plant Facts Explorer</h3>
+            <p>Made with ❤️ by Maniwar • Version 2.6.0</p>
+            <p style="opacity: 0.8; font-size: 0.9rem;">© 2024 • Powered by OpenAI & Streamlit</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # For backward compatibility
 def get_plant_image(plant_name: str) -> str:
