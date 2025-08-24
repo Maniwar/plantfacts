@@ -2,7 +2,7 @@
 Plant Facts Explorer - Main Application
 A modular Streamlit app for plant identification and information
 Author: Maniwar
-Version: 2.5.1 - Fixed redundant headers in expanders
+Version: 2.5.0 - Better images and expanded sections for better UX
 """
 
 import streamlit as st
