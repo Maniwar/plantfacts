@@ -44,8 +44,8 @@ from utils.ui_components import (
 config = AppConfig()
 
 # Page configuration
-st.set_page_config(
-    layout="wide",
+# st.set_page_config(
+#     layout="wide",
     page_title=config.PAGE_TITLE,
     page_icon=config.PAGE_ICON
 )
