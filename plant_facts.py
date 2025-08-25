@@ -124,25 +124,25 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
         
         # For mobile/Enter key support: Simple text input as fallback
         with st.container():
-            st.caption("💡 Type pick from the drop down menu above and click search, or do a direct search below and press enter.:")
+            st.caption("💡 Type into drop down above & pick from the the list to search.")
             
-            # Form captures Enter key
-            with st.form(key="text_search_form", clear_on_submit=False):
-                cols = st.columns([5, 1])
-                with cols[0]:
-                    text_input = st.text_input(
-                        "Direct input",
-                        placeholder="Type any plant name and press Enter...",
-                        label_visibility="collapsed",
-                        value=plant_name if plant_name else ""  # Mirror searchbox value
-                    )
-                with cols[1]:
-                    if st.form_submit_button("Go →", use_container_width=True):
-                        if text_input:
-                            st.session_state.search_query = text_input
-                            st.session_state.do_search = True
+        #     # Form captures Enter key
+        #     with st.form(key="text_search_form", clear_on_submit=False):
+        #         cols = st.columns([5, 1])
+        #         with cols[0]:
+        #             text_input = st.text_input(
+        #                 "Direct input",
+        #                 placeholder="Type any plant name and press Enter...",
+        #                 label_visibility="collapsed",
+        #                 value=plant_name if plant_name else ""  # Mirror searchbox value
+        #             )
+        #         with cols[1]:
+        #             if st.form_submit_button("Go →", use_container_width=True):
+        #                 if text_input:
+        #                     st.session_state.search_query = text_input
+        #                     st.session_state.do_search = True
         
-        # Quick search buttons for popular plants
+        # # Quick search buttons for popular plants
         st.divider()
         st.caption("🌿 **Popular plants** - tap to search instantly:")
         
