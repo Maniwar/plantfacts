@@ -143,27 +143,27 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
         #                     st.session_state.do_search = True
         
         # # Quick search buttons for popular plants
+        # # st.divider()
+        # # st.caption("🌿 **Popular plants** - tap to search instantly:")
+        
+        # # # Two rows of quick buttons
+        # # row1_cols = st.columns(5)
+        # # popular_plants_row1 = ["Rose", "Monstera", "Snake Plant", "Orchid", "Fern"]
+        # # for idx, plant in enumerate(popular_plants_row1):
+        # #     with row1_cols[idx]:
+        # #         if st.button(plant, key=f"pop_{plant}", use_container_width=True):
+        # #             st.session_state.search_query = plant
+        # #             st.session_state.do_search = True
+        
+        # # row2_cols = st.columns(5)
+        # # popular_plants_row2 = ["Cactus", "Aloe Vera", "Pothos", "Peace Lily", "Bamboo"]
+        # # for idx, plant in enumerate(popular_plants_row2):
+        # #     with row2_cols[idx]:
+        # #         if st.button(plant, key=f"pop2_{plant}", use_container_width=True, type="secondary"):
+        # #             st.session_state.search_query = plant
+        # #             st.session_state.do_search = True
+        
         # st.divider()
-        # st.caption("🌿 **Popular plants** - tap to search instantly:")
-        
-        # # Two rows of quick buttons
-        # row1_cols = st.columns(5)
-        # popular_plants_row1 = ["Rose", "Monstera", "Snake Plant", "Orchid", "Fern"]
-        # for idx, plant in enumerate(popular_plants_row1):
-        #     with row1_cols[idx]:
-        #         if st.button(plant, key=f"pop_{plant}", use_container_width=True):
-        #             st.session_state.search_query = plant
-        #             st.session_state.do_search = True
-        
-        # row2_cols = st.columns(5)
-        # popular_plants_row2 = ["Cactus", "Aloe Vera", "Pothos", "Peace Lily", "Bamboo"]
-        # for idx, plant in enumerate(popular_plants_row2):
-        #     with row2_cols[idx]:
-        #         if st.button(plant, key=f"pop2_{plant}", use_container_width=True, type="secondary"):
-        #             st.session_state.search_query = plant
-        #             st.session_state.do_search = True
-        
-        st.divider()
         mute_audio = st.checkbox("🔇 Mute Audio", value=True)
     
     # Execute search when triggered
