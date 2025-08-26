@@ -164,31 +164,15 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
         #             st.session_state.do_search = True
         
         st.divider()
-                
-                # Web Search Toggle with better visibility
-                with st.container():
-                    col1, col2 = st.columns([2, 1])
-                    with col1:
-                        use_web_search = st.toggle(
-                            "🌐 **Use Web Search for Latest Information**",
-                            value=False,
-                            help="""
-                            **ON**: Searches the web for current information including:
-                            • Recent pest/disease alerts
-                            • Seasonal care tips for this month
-                            • Latest cultivation techniques
-                            • Updated toxicity studies
-                            
-                            **OFF**: Faster response using AI knowledge (recommended for common plants)
-                            """
-                        )
-                        if use_web_search:
-                            st.caption("✨ Web search enabled - will find the latest plant care information")
-                        else:
-                            st.caption("⚡ Fast mode - using AI knowledge base")
-                    
-                    with col2:
-                        mute_audio = st.checkbox("🔇 Mute Audio", value=True)
+        col_opt1, col_opt2 = st.columns(2)
+        with col_opt1:
+            use_web_search = st.checkbox(
+                "🌐 Web Search", 
+                value=False,
+                help="Search the web for the latest plant care information, pest alerts, and seasonal tips. This takes a bit longer but provides the most current information."
+            )
+        with col_opt2:
+            mute_audio = st.checkbox("🔇 Mute Audio", value=True)
         
     # Execute search when triggered
     if st.session_state.do_search and st.session_state.search_query:
@@ -209,10 +193,10 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
                 # Check if we should use web search (defined earlier with checkbox)
                 use_web = 'use_web_search' in locals() and use_web_search
                 
-                # Check cache first
+                ## Check cache first
                 cached_analysis = plant_service.get_cached_analysis(plant_name, web_search_version=use_web)
                 
-                if cached_analysis and not (use_web and not cached_analysis):
+                if cached_analysis:
                     # Display cached content instantly
                     if cache_service.is_connected():
                         if use_web:
@@ -261,7 +245,16 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
             help="Supported formats: JPG, PNG"
         )
         
-        mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_upload")
+        col_opt1, col_opt2 = st.columns(2)
+        with col_opt1:
+            use_web_search_upload = st.checkbox(
+                "🌐 Web Search", 
+                value=False,
+                key="web_search_upload",
+                help="After identifying the plant, search the web for current care information, pest alerts, and seasonal tips."
+            )
+        with col_opt2:
+            mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_upload")
     
     if uploaded_image:
         # Read image bytes once
@@ -284,24 +277,31 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
                 # Create placeholder for content
                 content_placeholder = st.empty()
                 
-                # Check cache status
-                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                # Check cache status with web search version
+                use_web = use_web_search_upload if 'use_web_search_upload' in locals() else False
+                cached_analysis = plant_service.get_cached_analysis(plant_name, web_search_version=use_web)
                 
                 if cached_analysis:
                     # Display cached content instantly
                     if cache_service.is_connected():
-                        st.info("💾 Loading from cache - instant results!")
+                        if use_web:
+                            st.info("💾 Loading web-searched results from cache!")
+                        else:
+                            st.info("💾 Loading from cache - instant results!")
                     analysis = cached_analysis
                 else:
                     # Stream new content
-                    st.info("🌿 Generating detailed information...")
+                    if use_web:
+                        st.info("🌐 Searching the web for the latest plant information...")
+                    else:
+                        st.info("🌿 Generating detailed information...")
                     
                     with content_placeholder.container():
                         st.markdown("### 🔍 Live Analysis Stream")
                         analysis = ""
                         stream_container = st.empty()
                         
-                        for chunk in plant_service.get_analysis_stream(plant_name, use_web_search=False):
+                        for chunk in plant_service.get_analysis_stream(plant_name, use_web_search=use_web):
                             analysis += chunk
                             render_streaming_content(analysis, stream_container)
                     
@@ -332,7 +332,17 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
         st.subheader("📸 Capture Plant Image")
         
         captured_image = st.camera_input("Take a photo of your plant")
-        mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_camera")
+        
+        col_opt1, col_opt2 = st.columns(2)
+        with col_opt1:
+            use_web_search_camera = st.checkbox(
+                "🌐 Web Search", 
+                value=False,
+                key="web_search_camera",
+                help="After identifying the plant, search the web for current care information, pest alerts, and seasonal tips."
+            )
+        with col_opt2:
+            mute_audio = st.checkbox("🔇 Mute Audio", value=True, key="mute_camera")
     
     if captured_image:
         # Read image bytes once
@@ -355,24 +365,31 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
                 # Create placeholder for content
                 content_placeholder = st.empty()
                 
-                # Check cache status
-                cached_analysis = plant_service.get_cached_analysis(plant_name)
+                # Check cache status with web search version
+                use_web = use_web_search_camera if 'use_web_search_camera' in locals() else False
+                cached_analysis = plant_service.get_cached_analysis(plant_name, web_search_version=use_web)
                 
                 if cached_analysis:
                     # Display cached content instantly
                     if cache_service.is_connected():
-                        st.info("💾 Loading from cache - instant results!")
+                        if use_web:
+                            st.info("💾 Loading web-searched results from cache!")
+                        else:
+                            st.info("💾 Loading from cache - instant results!")
                     analysis = cached_analysis
                 else:
                     # Stream new content
-                    st.info("🌿 Generating detailed information...")
+                    if use_web:
+                        st.info("🌐 Searching the web for the latest plant information...")
+                    else:
+                        st.info("🌿 Generating detailed information...")
                     
                     with content_placeholder.container():
                         st.markdown("### 🔍 Live Analysis Stream")
                         analysis = ""
                         stream_container = st.empty()
                         
-                        for chunk in plant_service.get_analysis_stream(plant_name, use_web_search=False):
+                        for chunk in plant_service.get_analysis_stream(plant_name, use_web_search=use_web):
                             analysis += chunk
                             render_streaming_content(analysis, stream_container)
                     
