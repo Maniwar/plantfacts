@@ -50,9 +50,10 @@ st.set_page_config(
     page_icon=config.PAGE_ICON
 )
 
-# Initialize services without caching to avoid stale instances
+# Initialize services with proper caching to avoid reconnections
+@st.cache_resource
 def init_services():
-    """Initialize service instances"""
+    """Initialize service instances - cached across reruns"""
     cache_service = CacheService()
     plant_service = PlantService(cache_service)
     return plant_service, cache_service
