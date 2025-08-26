@@ -665,7 +665,7 @@ def render_plant_analysis_display(
     with left:
         # Use uploaded image if provided, otherwise search for one
         if uploaded_image_bytes:
-            st.image(uploaded_image_bytes, caption=f"🌿 {plant_name} - User's Image", use_container_width=True)
+            st.image(uploaded_image_bytes, caption=f"🌿 {plant_name} - User's Image", width='stretch')
         else:
             img = get_plant_image_info(plant_name)
             cap = f"🌿 {plant_name}"
@@ -673,7 +673,7 @@ def render_plant_analysis_display(
                 cap += f" • [{img['caption']}]({img['page_url']})"
             else:
                 cap += f" • {img['caption']}"
-            st.image(img["url"], caption=cap, use_container_width=True)
+            st.image(img["url"], caption=cap, width='stretch')
 
         st.markdown("#### ⭐ Quick Facts")
         facts = extract_quick_facts(analysis)

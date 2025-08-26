@@ -239,7 +239,7 @@ elif input_method == config.INPUT_METHODS[1]:  # "📁 File Upload"
         col1, col2 = st.columns([1, 2], gap="medium")
         
         with col1:
-            st.image(image_bytes, caption='Uploaded Image', use_container_width=True)
+            st.image(image_bytes, caption='Uploaded Image', width='stretch')
         
         with col2:
             try:
@@ -310,7 +310,7 @@ elif input_method == config.INPUT_METHODS[2]:  # "📸 Camera Capture"
         col1, col2 = st.columns([1, 2], gap="medium")
         
         with col1:
-            st.image(image_bytes, caption='Captured Image', use_container_width=True)
+            st.image(image_bytes, caption='Captured Image', width='stretch')
         
         with col2:
             try:
