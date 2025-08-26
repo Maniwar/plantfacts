@@ -164,15 +164,31 @@ if input_method == config.INPUT_METHODS[0]:  # "🔍 Search Box"
         #             st.session_state.do_search = True
         
         st.divider()
-        col_opt1, col_opt2 = st.columns(2)
-        with col_opt1:
-            use_web_search = st.checkbox(
-                "🌐 Web Search", 
-                value=False,
-                help="Search the web for the latest plant care information, pest alerts, and seasonal tips. This takes a bit longer but provides the most current information."
-            )
-        with col_opt2:
-            mute_audio = st.checkbox("🔇 Mute Audio", value=True)
+                
+                # Web Search Toggle with better visibility
+                with st.container():
+                    col1, col2 = st.columns([2, 1])
+                    with col1:
+                        use_web_search = st.toggle(
+                            "🌐 **Use Web Search for Latest Information**",
+                            value=False,
+                            help="""
+                            **ON**: Searches the web for current information including:
+                            • Recent pest/disease alerts
+                            • Seasonal care tips for this month
+                            • Latest cultivation techniques
+                            • Updated toxicity studies
+                            
+                            **OFF**: Faster response using AI knowledge (recommended for common plants)
+                            """
+                        )
+                        if use_web_search:
+                            st.caption("✨ Web search enabled - will find the latest plant care information")
+                        else:
+                            st.caption("⚡ Fast mode - using AI knowledge base")
+                    
+                    with col2:
+                        mute_audio = st.checkbox("🔇 Mute Audio", value=True)
         
     # Execute search when triggered
     if st.session_state.do_search and st.session_state.search_query:
