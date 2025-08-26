@@ -8,7 +8,9 @@ Version: 5.1.0 - Enhanced search with Enter key support and auto-search on selec
 import streamlit as st
 import base64
 import logging
-
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
