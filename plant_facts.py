@@ -51,6 +51,7 @@ st.set_page_config(
 )
 
 # Initialize services without caching to avoid stale instances
+@st.cache_resource
 def init_services():
     """Initialize service instances"""
     cache_service = CacheService()
