@@ -58,7 +58,7 @@ class PlantService:
         # Strip whitespace and convert to title case for consistency
         return plant_name.strip().title()
     
-def get_analysis_stream(self, plant_name: str, use_web_search: bool = False) -> Generator[str, None, None]:
+    def get_analysis_stream(self, plant_name: str, use_web_search: bool = False) -> Generator[str, None, None]:
         """
         Get plant analysis with streaming support and optional web search
         
@@ -148,7 +148,7 @@ def get_analysis_stream(self, plant_name: str, use_web_search: bool = False) -> 
             logger.error(f"Error generating analysis for {plant_name}: {e}")
             yield f"\n\nError generating analysis: {str(e)}"
     
-def get_cached_analysis(self, plant_name: str, web_search_version: bool = False) -> Optional[str]:
+    def get_cached_analysis(self, plant_name: str, web_search_version: bool = False) -> Optional[str]:
         """
         Get cached analysis if available
         
