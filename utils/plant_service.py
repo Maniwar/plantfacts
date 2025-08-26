@@ -100,21 +100,42 @@ class PlantService:
                 Include the most up-to-date information you find, and mention any particularly recent updates or changes in care recommendations."""
             
             # Build the API call parameters
-            api_params = {
-                "model": self.config.OPENAI_MODEL,
-                "messages": [
-                    {
-                        "role": "system", 
-                        "content": "You are a plant expert providing detailed, accurate, and current information about various plants. When web search is enabled, prioritize recent and authoritative sources."
-                    },
-                    {
-                        "role": "user", 
-                        "content": user_prompt
-                    }
-                ],
-                "max_tokens": self.config.MAX_TOKENS,
-                "stream": True
-            }
+            if use_web_search:
+                # Use the search preview model for web search
+                api_params = {
+                    "model": "gpt-4o-mini-search-preview",  # Special search model
+                    "web_search_options": {},  # Enable web search
+                    "messages": [
+                        {
+                            "role": "system", 
+                            "content": "You are a plant expert. Search the web for the most current information about plants."
+                        },
+                        {
+                            "role": "user", 
+                            "content": user_prompt
+                        }
+                    ],
+                    "max_tokens": self.config.MAX_TOKENS,
+                    "stream": True
+                }
+                yield "🔍 Searching the web for the latest information...\n\n"
+            else:
+                # Use regular model without web search
+                api_params = {
+                    "model": self.config.OPENAI_MODEL,
+                    "messages": [
+                        {
+                            "role": "system", 
+                            "content": "You are a plant expert providing detailed information about various plants."
+                        },
+                        {
+                            "role": "user", 
+                            "content": user_prompt
+                        }
+                    ],
+                    "max_tokens": self.config.MAX_TOKENS,
+                    "stream": True
+                }
             
             # Add web search tool if requested
             if use_web_search:
