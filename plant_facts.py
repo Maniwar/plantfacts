@@ -395,5 +395,247 @@ with st.expander("🔧 System Status", expanded=False):
                     col_a, col_b = st.columns([1, 3])
                 else:
                     st.info(f"❌ '{test_plant_normalized}' not cached yet")
+
+
+# =========================================================
+# Animated GitHub Sponsor Section with Plant Particles
+# =========================================================
+
+st.markdown("---")
+
+# Animated sponsor section with floating plant particles
+st.html("""
+    <style>
+    @keyframes float-up {
+        0% {
+            opacity: 0;
+            transform: translateY(100px) rotate(0deg);
+        }
+        10% {
+            opacity: 1;
+        }
+        90% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-100px) rotate(360deg);
+        }
+    }
+    
+    @keyframes pulse-glow {
+        0%, 100% {
+            transform: scale(1);
+            filter: brightness(1);
+        }
+        50% {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+    }
+    
+    @keyframes sway {
+        0%, 100% {
+            transform: translateX(0px);
+        }
+        50% {
+            transform: translateX(30px);
+        }
+    }
+    
+    .particle-container {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+        background: linear-gradient(180deg, transparent 0%, rgba(102, 126, 234, 0.05) 100%);
+        border-radius: 20px;
+        margin: 2rem 0;
+    }
+    
+    .particle {
+        position: absolute;
+        font-size: 20px;
+        animation: float-up 6s infinite ease-in-out;
+        opacity: 0;
+    }
+    
+    .particle.leaf { animation-delay: 0s; left: 10%; animation-duration: 5s; }
+    .particle.flower { animation-delay: 1s; left: 30%; animation-duration: 6s; }
+    .particle.sprout { animation-delay: 2s; left: 50%; animation-duration: 5.5s; }
+    .particle.seed { animation-delay: 3s; left: 70%; animation-duration: 6.5s; }
+    .particle.tree { animation-delay: 4s; left: 90%; animation-duration: 5s; }
+    
+    .particle:nth-child(odd) {
+        animation-name: float-up, sway;
+        animation-duration: 6s, 3s;
+        animation-iteration-count: infinite;
+    }
+    
+    .sponsor-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 1.5rem 2rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        animation: pulse-glow 3s infinite ease-in-out;
+    }
+    
+    .heart-icon {
+        display: inline-block;
+        animation: pulse-glow 2s infinite ease-in-out;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .sparkle {
+        position: absolute;
+        color: #ffd700;
+        animation: float-up 3s infinite linear;
+        font-size: 14px;
+    }
+    
+    .sparkle:nth-child(6) { left: 15%; animation-delay: 0.5s; }
+    .sparkle:nth-child(7) { left: 85%; animation-delay: 1.5s; }
+    .sparkle:nth-child(8) { left: 40%; animation-delay: 2.5s; }
+    .sparkle:nth-child(9) { left: 60%; animation-delay: 3.5s; }
+    .sparkle:nth-child(10) { left: 25%; animation-delay: 4.5s; }
+    </style>
+    
+    <div class="particle-container">
+        <!-- Floating plant particles -->
+        <div class="particle leaf">🍃</div>
+        <div class="particle flower">🌸</div>
+        <div class="particle sprout">🌱</div>
+        <div class="particle seed">🌾</div>
+        <div class="particle tree">🌿</div>
+        
+        <!-- Sparkles for extra magic -->
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+        <div class="sparkle">✨</div>
+        
+        <!-- Main content -->
+        <div class="sponsor-content">
+            <div class="heart-icon">💚</div>
+            <h3 style="margin: 0 0 0.5rem 0; color: #2d3748;">Growing PlantFacts Together</h3>
+            <p style="margin: 0.5rem 0; color: #4a5568; font-size: 0.9rem;">
+                Free forever • No ads • Plant-powered
+            </p>
+        </div>
+    </div>
+""")
+
+# Sponsor buttons with animation on hover
+col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1])
+
+with col2:
+    if st.button("🌱 Sponsor", key="sponsor_animated", use_container_width=True, type="primary"):
+        st.balloons()
+        st.html("""
+            <script>
+            window.open('https://github.com/sponsors/Maniwar', '_blank');
+            </script>
+        """)
+
+with col3:
+    if st.button("⭐ Star Repo", key="star_animated", use_container_width=True):
+        st.html("""
+            <script>
+            window.open('https://github.com/Maniwar/plantfacts', '_blank');
+            </script>
+        """)
+        
+with col4:
+    if st.button("🔗 All Projects", key="projects_animated", use_container_width=True):
+        st.html("""
+            <script>
+            window.open('https://github.com/Maniwar', '_blank');
+            </script>
+        """)
+
+# Fun animated message that changes
+plant_messages = [
+    "🌿 Every plant deserves to live its best life",
+    "🌱 Keeping plants alive, one search at a time",
+    "🍃 Your green thumb assistant, always free",
+    "🌸 Plants make people happy. This app helps.",
+    "🌾 Built by a plant parent, for plant parents"
+]
+
+import random
+import time
+
+# Use time-based selection for variety
+message_index = int(time.time() / 10) % len(plant_messages)
+
+st.html(f"""
+    <div style="text-align: center; margin: 1rem 0;">
+        <p style="
+            color: #667eea;
+            font-size: 0.9rem;
+            font-style: italic;
+            opacity: 0;
+            animation: fadeIn 2s forwards;
+        ">
+            {plant_messages[message_index]}
+        </p>
+    </div>
+    
+    <style>
+    @keyframes fadeIn {{
+        to {{ opacity: 1; }}
+    }}
+    </style>
+""")
+
+# Optional: Confetti burst on special occasions
+if random.random() < 0.1:  # 10% chance to show special effect
+    st.html("""
+        <script>
+        // Create falling leaves effect
+        function createLeaves() {
+            const leaves = ['🍃', '🌿', '🍀', '🌱'];
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    const leaf = document.createElement('div');
+                    leaf.innerHTML = leaves[Math.floor(Math.random() * leaves.length)];
+                    leaf.style.position = 'fixed';
+                    leaf.style.left = Math.random() * 100 + '%';
+                    leaf.style.top = '-50px';
+                    leaf.style.fontSize = (Math.random() * 20 + 15) + 'px';
+                    leaf.style.opacity = '0.8';
+                    leaf.style.pointerEvents = 'none';
+                    leaf.style.zIndex = '9999';
+                    leaf.style.transition = 'all 4s ease-in-out';
+                    leaf.style.transform = 'rotate(0deg)';
+                    
+                    document.body.appendChild(leaf);
+                    
+                    setTimeout(() => {
+                        leaf.style.top = '100%';
+                        leaf.style.transform = 'rotate(360deg)';
+                        leaf.style.opacity = '0';
+                    }, 100);
+                    
+                    setTimeout(() => leaf.remove(), 4100);
+                }, i * 200);
+            }
+        }
+        
+        // Trigger on page load with delay
+        setTimeout(createLeaves, 1000);
+        </script>
+    """)
+
+st.markdown("---")
+
 # Footer
 render_legal_footer()
