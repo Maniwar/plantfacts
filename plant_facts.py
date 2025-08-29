@@ -398,14 +398,15 @@ with st.expander("🔧 System Status", expanded=False):
 
 
 # =========================================================
-# Animated GitHub Sponsor Section with Plant Particles
+# Fully Responsive Animated GitHub Sponsor Section
 # =========================================================
 
 st.markdown("---")
 
-# Animated sponsor section with floating plant particles
+# Complete responsive sponsor section with mobile/tablet/desktop support
 st.html("""
     <style>
+    /* Base animations with reduced motion support */
     @keyframes float-up {
         0% {
             opacity: 0;
@@ -429,8 +430,8 @@ st.html("""
             filter: brightness(1);
         }
         50% {
-            transform: scale(1.05);
-            filter: brightness(1.2);
+            transform: scale(1.03);
+            filter: brightness(1.1);
         }
     }
     
@@ -439,25 +440,44 @@ st.html("""
             transform: translateX(0px);
         }
         50% {
-            transform: translateX(30px);
+            transform: translateX(20px);
         }
     }
     
+    /* Reduced motion for accessibility */
+    @media (prefers-reduced-motion: reduce) {
+        .particle,
+        .sparkle,
+        .sponsor-content,
+        .heart-icon {
+            animation: none !important;
+        }
+    }
+    
+    /* Main container - responsive */
     .particle-container {
         position: relative;
         width: 100%;
-        height: 200px;
+        min-height: 320px;
         overflow: hidden;
-        background: linear-gradient(180deg, transparent 0%, rgba(102, 126, 234, 0.05) 100%);
+        background: linear-gradient(180deg, rgba(102, 187, 106, 0.03) 0%, rgba(102, 126, 234, 0.05) 100%);
         border-radius: 20px;
-        margin: 2rem 0;
+        margin: 1rem 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        box-sizing: border-box;
     }
     
+    /* Particles - hide on very small screens for performance */
     .particle {
         position: absolute;
         font-size: 20px;
         animation: float-up 6s infinite ease-in-out;
         opacity: 0;
+        z-index: 1;
+        pointer-events: none;
     }
     
     .particle.leaf { animation-delay: 0s; left: 10%; animation-duration: 5s; }
@@ -466,24 +486,34 @@ st.html("""
     .particle.seed { animation-delay: 3s; left: 70%; animation-duration: 6.5s; }
     .particle.tree { animation-delay: 4s; left: 90%; animation-duration: 5s; }
     
-    .particle:nth-child(odd) {
-        animation-name: float-up, sway;
-        animation-duration: 6s, 3s;
-        animation-iteration-count: infinite;
+    .sparkle {
+        position: absolute;
+        color: #ffd700;
+        animation: float-up 3s infinite linear;
+        font-size: 14px;
+        z-index: 1;
+        pointer-events: none;
     }
     
+    .sparkle:nth-child(6) { left: 15%; animation-delay: 0.5s; }
+    .sparkle:nth-child(7) { left: 85%; animation-delay: 1.5s; }
+    .sparkle:nth-child(8) { left: 40%; animation-delay: 2.5s; }
+    .sparkle:nth-child(9) { left: 60%; animation-delay: 3.5s; }
+    .sparkle:nth-child(10) { left: 25%; animation-delay: 4.5s; }
+    
+    /* Content box - responsive */
     .sponsor-content {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        position: relative;
         text-align: center;
         z-index: 10;
         background: rgba(255, 255, 255, 0.95);
-        padding: 1.5rem 2rem;
+        padding: 1.5rem;
         border-radius: 15px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         animation: pulse-glow 3s infinite ease-in-out;
+        max-width: 500px;
+        width: 90%;
+        box-sizing: border-box;
     }
     
     .heart-icon {
@@ -493,147 +523,283 @@ st.html("""
         margin-bottom: 0.5rem;
     }
     
-    .sparkle {
-        position: absolute;
-        color: #ffd700;
-        animation: float-up 3s infinite linear;
-        font-size: 14px;
+    /* Title - responsive font size */
+    .sponsor-title {
+        margin: 0 0 0.5rem 0;
+        color: #2d3748;
+        font-size: clamp(1.1rem, 4vw, 1.5rem);
+        font-weight: bold;
     }
     
-    .sparkle:nth-child(6) { left: 15%; animation-delay: 0.5s; }
-    .sparkle:nth-child(7) { left: 85%; animation-delay: 1.5s; }
-    .sparkle:nth-child(8) { left: 40%; animation-delay: 2.5s; }
-    .sparkle:nth-child(9) { left: 60%; animation-delay: 3.5s; }
-    .sparkle:nth-child(10) { left: 25%; animation-delay: 4.5s; }
+    /* Subtitle - responsive */
+    .sponsor-subtitle {
+        margin: 0.5rem 0;
+        color: #4a5568;
+        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+    }
+    
+    /* Button container - responsive flex */
+    .button-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    /* Buttons - touch-friendly sizes */
+    .sponsor-btn {
+        display: inline-block;
+        padding: 0.75rem 1rem;
+        min-height: 44px; /* iOS touch target */
+        min-width: 80px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        user-select: none;
+        box-sizing: border-box;
+        text-align: center;
+        line-height: 1.2;
+    }
+    
+    .sponsor-btn.primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+    
+    .sponsor-btn.secondary {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+    
+    /* Hover states - desktop only */
+    @media (hover: hover) and (pointer: fine) {
+        .sponsor-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .sponsor-btn.secondary:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+    }
+    
+    /* Active states for touch devices */
+    .sponsor-btn:active {
+        transform: scale(0.98);
+    }
+    
+    .sponsor-message {
+        color: #667eea;
+        font-size: clamp(0.75rem, 2vw, 0.85rem);
+        font-style: italic;
+        margin-top: 1rem;
+        opacity: 0.9;
+        padding: 0 0.5rem;
+    }
+    
+    /* Mobile phones - portrait */
+    @media only screen and (max-width: 480px) {
+        .particle-container {
+            min-height: 280px;
+            padding: 1.5rem 0.75rem;
+            margin: 0.5rem 0;
+            border-radius: 15px;
+        }
+        
+        .sponsor-content {
+            padding: 1.25rem 1rem;
+            width: 95%;
+        }
+        
+        .button-container {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .sponsor-btn {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            font-size: 0.95rem;
+        }
+        
+        /* Hide some particles on small screens */
+        .particle:nth-child(even),
+        .sparkle:nth-child(even) {
+            display: none;
+        }
+    }
+    
+    /* Mobile phones - landscape */
+    @media only screen and (max-width: 812px) and (orientation: landscape) {
+        .particle-container {
+            min-height: 250px;
+            padding: 1rem;
+        }
+        
+        .sponsor-content {
+            padding: 1rem;
+        }
+        
+        .button-container {
+            gap: 0.5rem;
+        }
+        
+        .sponsor-btn {
+            padding: 0.625rem 0.875rem;
+            font-size: 0.85rem;
+        }
+    }
+    
+    /* Tablets */
+    @media only screen and (min-width: 481px) and (max-width: 1024px) {
+        .particle-container {
+            min-height: 300px;
+            padding: 2rem 1.5rem;
+        }
+        
+        .sponsor-content {
+            padding: 1.75rem 2rem;
+            max-width: 600px;
+        }
+        
+        .button-container {
+            gap: 0.75rem;
+        }
+        
+        .sponsor-btn {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.95rem;
+            min-width: 100px;
+        }
+    }
+    
+    /* Desktop and larger */
+    @media only screen and (min-width: 1025px) {
+        .particle-container {
+            min-height: 280px;
+        }
+        
+        .sponsor-content {
+            padding: 2rem 2.5rem;
+        }
+        
+        .button-container {
+            flex-direction: row;
+        }
+    }
+    
+    /* iPhone notch safe areas */
+    @supports (padding: max(0px)) {
+        .particle-container {
+            padding-left: max(1rem, env(safe-area-inset-left));
+            padding-right: max(1rem, env(safe-area-inset-right));
+        }
+    }
+    
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        .sponsor-btn {
+            border: 2px solid currentColor;
+        }
+        
+        .sponsor-content {
+            border: 2px solid #000;
+        }
+    }
+    
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .sponsor-content {
+            background: rgba(30, 30, 30, 0.95);
+        }
+        
+        .sponsor-title {
+            color: #f0f0f0;
+        }
+        
+        .sponsor-subtitle {
+            color: #d0d0d0;
+        }
+        
+        .sponsor-btn.secondary {
+            background: #2a2a2a;
+            color: #a0a0ff;
+            border-color: #a0a0ff;
+        }
+    }
+    
+    /* Print styles */
+    @media print {
+        .particle-container {
+            display: none;
+        }
+    }
     </style>
     
-    <div class="particle-container">
+    <div class="particle-container" role="region" aria-label="Support PlantFacts">
         <!-- Floating plant particles -->
-        <div class="particle leaf">🍃</div>
-        <div class="particle flower">🌸</div>
-        <div class="particle sprout">🌱</div>
-        <div class="particle seed">🌾</div>
-        <div class="particle tree">🌿</div>
+        <div class="particle leaf" aria-hidden="true">🍃</div>
+        <div class="particle flower" aria-hidden="true">🌸</div>
+        <div class="particle sprout" aria-hidden="true">🌱</div>
+        <div class="particle seed" aria-hidden="true">🌾</div>
+        <div class="particle tree" aria-hidden="true">🌿</div>
         
-        <!-- Sparkles for extra magic -->
-        <div class="sparkle">✨</div>
-        <div class="sparkle">✨</div>
-        <div class="sparkle">✨</div>
-        <div class="sparkle">✨</div>
-        <div class="sparkle">✨</div>
+        <!-- Sparkles -->
+        <div class="sparkle" aria-hidden="true">✨</div>
+        <div class="sparkle" aria-hidden="true">✨</div>
+        <div class="sparkle" aria-hidden="true">✨</div>
+        <div class="sparkle" aria-hidden="true">✨</div>
+        <div class="sparkle" aria-hidden="true">✨</div>
         
-        <!-- Main content -->
+        <!-- All content inside -->
         <div class="sponsor-content">
-            <div class="heart-icon">💚</div>
-            <h3 style="margin: 0 0 0.5rem 0; color: #2d3748;">Growing PlantFacts Together</h3>
-            <p style="margin: 0.5rem 0; color: #4a5568; font-size: 0.9rem;">
+            <div class="heart-icon" aria-hidden="true">💚</div>
+            <h3 class="sponsor-title">Growing PlantFacts Together</h3>
+            <p class="sponsor-subtitle">
                 Free forever • No ads • Plant-powered
+            </p>
+            
+            <div class="button-container">
+                <a href="https://github.com/sponsors/Maniwar" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="sponsor-btn primary"
+                   aria-label="Support on GitHub Sponsors">
+                    🌱 Sponsor
+                </a>
+                <a href="https://github.com/Maniwar/plantfacts" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="sponsor-btn secondary"
+                   aria-label="Star PlantFacts on GitHub">
+                    ⭐ Star Repo
+                </a>
+                <a href="https://github.com/Maniwar" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="sponsor-btn secondary"
+                   aria-label="View all projects on GitHub">
+                    🔗 All Projects
+                </a>
+            </div>
+            
+            <p class="sponsor-message">
+                🌿 Your green thumb assistant, always free
             </p>
         </div>
     </div>
 """)
-
-# Sponsor buttons with animation on hover
-col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1])
-
-with col2:
-    if st.button("🌱 Sponsor", key="sponsor_animated", use_container_width=True, type="primary"):
-        st.balloons()
-        st.html("""
-            <script>
-            window.open('https://github.com/sponsors/Maniwar', '_blank');
-            </script>
-        """)
-
-with col3:
-    if st.button("⭐ Star Repo", key="star_animated", use_container_width=True):
-        st.html("""
-            <script>
-            window.open('https://github.com/Maniwar/plantfacts', '_blank');
-            </script>
-        """)
-        
-with col4:
-    if st.button("🔗 All Projects", key="projects_animated", use_container_width=True):
-        st.html("""
-            <script>
-            window.open('https://github.com/Maniwar', '_blank');
-            </script>
-        """)
-
-# Fun animated message that changes
-plant_messages = [
-    "🌿 Every plant deserves to live its best life",
-    "🌱 Keeping plants alive, one search at a time",
-    "🍃 Your green thumb assistant, always free",
-    "🌸 Plants make people happy. This app helps.",
-    "🌾 Built by a plant parent, for plant parents"
-]
-
-import random
-import time
-
-# Use time-based selection for variety
-message_index = int(time.time() / 10) % len(plant_messages)
-
-st.html(f"""
-    <div style="text-align: center; margin: 1rem 0;">
-        <p style="
-            color: #667eea;
-            font-size: 0.9rem;
-            font-style: italic;
-            opacity: 0;
-            animation: fadeIn 2s forwards;
-        ">
-            {plant_messages[message_index]}
-        </p>
-    </div>
-    
-    <style>
-    @keyframes fadeIn {{
-        to {{ opacity: 1; }}
-    }}
-    </style>
-""")
-
-# Optional: Confetti burst on special occasions
-if random.random() < 0.1:  # 10% chance to show special effect
-    st.html("""
-        <script>
-        // Create falling leaves effect
-        function createLeaves() {
-            const leaves = ['🍃', '🌿', '🍀', '🌱'];
-            for (let i = 0; i < 15; i++) {
-                setTimeout(() => {
-                    const leaf = document.createElement('div');
-                    leaf.innerHTML = leaves[Math.floor(Math.random() * leaves.length)];
-                    leaf.style.position = 'fixed';
-                    leaf.style.left = Math.random() * 100 + '%';
-                    leaf.style.top = '-50px';
-                    leaf.style.fontSize = (Math.random() * 20 + 15) + 'px';
-                    leaf.style.opacity = '0.8';
-                    leaf.style.pointerEvents = 'none';
-                    leaf.style.zIndex = '9999';
-                    leaf.style.transition = 'all 4s ease-in-out';
-                    leaf.style.transform = 'rotate(0deg)';
-                    
-                    document.body.appendChild(leaf);
-                    
-                    setTimeout(() => {
-                        leaf.style.top = '100%';
-                        leaf.style.transform = 'rotate(360deg)';
-                        leaf.style.opacity = '0';
-                    }, 100);
-                    
-                    setTimeout(() => leaf.remove(), 4100);
-                }, i * 200);
-            }
-        }
-        
-        // Trigger on page load with delay
-        setTimeout(createLeaves, 1000);
-        </script>
-    """)
 
 st.markdown("---")
 
