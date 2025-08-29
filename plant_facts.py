@@ -397,6 +397,8 @@ with st.expander("🔧 System Status", expanded=False):
                     st.info(f"❌ '{test_plant_normalized}' not cached yet")
 
 
+# Footer
+render_legal_footer()
 # =========================================================
 # Compact Responsive Animated GitHub Sponsor Section
 # =========================================================
@@ -804,5 +806,3 @@ st.html("""
 
 st.markdown("---")
 
-# Footer
-render_legal_footer()
