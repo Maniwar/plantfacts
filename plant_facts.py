@@ -398,19 +398,19 @@ with st.expander("🔧 System Status", expanded=False):
 
 
 # =========================================================
-# Fully Responsive Animated GitHub Sponsor Section
+# Compact Responsive Animated GitHub Sponsor Section
 # =========================================================
 
 st.markdown("---")
 
-# Complete responsive sponsor section with mobile/tablet/desktop support
+# Compact responsive sponsor section - half height
 st.html("""
     <style>
     /* Base animations with reduced motion support */
     @keyframes float-up {
         0% {
             opacity: 0;
-            transform: translateY(100px) rotate(0deg);
+            transform: translateY(50px) rotate(0deg);
         }
         10% {
             opacity: 1;
@@ -420,7 +420,7 @@ st.html("""
         }
         100% {
             opacity: 0;
-            transform: translateY(-100px) rotate(360deg);
+            transform: translateY(-50px) rotate(360deg);
         }
     }
     
@@ -430,8 +430,8 @@ st.html("""
             filter: brightness(1);
         }
         50% {
-            transform: scale(1.03);
-            filter: brightness(1.1);
+            transform: scale(1.02);
+            filter: brightness(1.08);
         }
     }
     
@@ -440,7 +440,7 @@ st.html("""
             transform: translateX(0px);
         }
         50% {
-            transform: translateX(20px);
+            transform: translateX(15px);
         }
     }
     
@@ -454,43 +454,43 @@ st.html("""
         }
     }
     
-    /* Main container - responsive */
+    /* Main container - compact height */
     .particle-container {
         position: relative;
         width: 100%;
-        min-height: 320px;
+        min-height: 160px;
         overflow: hidden;
         background: linear-gradient(180deg, rgba(102, 187, 106, 0.03) 0%, rgba(102, 126, 234, 0.05) 100%);
-        border-radius: 20px;
-        margin: 1rem 0;
+        border-radius: 15px;
+        margin: 0.5rem 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 2rem 1rem;
+        padding: 1rem;
         box-sizing: border-box;
     }
     
-    /* Particles - hide on very small screens for performance */
+    /* Smaller particles */
     .particle {
         position: absolute;
-        font-size: 20px;
-        animation: float-up 6s infinite ease-in-out;
+        font-size: 16px;
+        animation: float-up 5s infinite ease-in-out;
         opacity: 0;
         z-index: 1;
         pointer-events: none;
     }
     
-    .particle.leaf { animation-delay: 0s; left: 10%; animation-duration: 5s; }
-    .particle.flower { animation-delay: 1s; left: 30%; animation-duration: 6s; }
-    .particle.sprout { animation-delay: 2s; left: 50%; animation-duration: 5.5s; }
-    .particle.seed { animation-delay: 3s; left: 70%; animation-duration: 6.5s; }
-    .particle.tree { animation-delay: 4s; left: 90%; animation-duration: 5s; }
+    .particle.leaf { animation-delay: 0s; left: 10%; animation-duration: 4s; }
+    .particle.flower { animation-delay: 1s; left: 30%; animation-duration: 5s; }
+    .particle.sprout { animation-delay: 2s; left: 50%; animation-duration: 4.5s; }
+    .particle.seed { animation-delay: 3s; left: 70%; animation-duration: 5.5s; }
+    .particle.tree { animation-delay: 4s; left: 90%; animation-duration: 4s; }
     
     .sparkle {
         position: absolute;
         color: #ffd700;
         animation: float-up 3s infinite linear;
-        font-size: 14px;
+        font-size: 12px;
         z-index: 1;
         pointer-events: none;
     }
@@ -501,15 +501,15 @@ st.html("""
     .sparkle:nth-child(9) { left: 60%; animation-delay: 3.5s; }
     .sparkle:nth-child(10) { left: 25%; animation-delay: 4.5s; }
     
-    /* Content box - responsive */
+    /* Content box - compact */
     .sponsor-content {
         position: relative;
         text-align: center;
         z-index: 10;
         background: rgba(255, 255, 255, 0.95);
-        padding: 1.5rem;
-        border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
         animation: pulse-glow 3s infinite ease-in-out;
         max-width: 500px;
         width: 90%;
@@ -519,44 +519,44 @@ st.html("""
     .heart-icon {
         display: inline-block;
         animation: pulse-glow 2s infinite ease-in-out;
-        font-size: 1.5rem;
-        margin-bottom: 0.5rem;
+        font-size: 1.2rem;
+        margin-bottom: 0.25rem;
     }
     
-    /* Title - responsive font size */
+    /* Title - smaller */
     .sponsor-title {
-        margin: 0 0 0.5rem 0;
+        margin: 0 0 0.25rem 0;
         color: #2d3748;
-        font-size: clamp(1.1rem, 4vw, 1.5rem);
+        font-size: clamp(0.95rem, 3.5vw, 1.2rem);
         font-weight: bold;
     }
     
-    /* Subtitle - responsive */
+    /* Subtitle - smaller */
     .sponsor-subtitle {
-        margin: 0.5rem 0;
+        margin: 0.25rem 0;
         color: #4a5568;
-        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+        font-size: clamp(0.75rem, 2vw, 0.85rem);
     }
     
-    /* Button container - responsive flex */
+    /* Button container - compact */
     .button-container {
         display: flex;
-        gap: 0.5rem;
-        margin-top: 1rem;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
         justify-content: center;
         flex-wrap: wrap;
     }
     
-    /* Buttons - touch-friendly sizes */
+    /* Buttons - smaller but still touch-friendly */
     .sponsor-btn {
         display: inline-block;
-        padding: 0.75rem 1rem;
-        min-height: 44px; /* iOS touch target */
-        min-width: 80px;
-        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        min-height: 36px;
+        min-width: 70px;
+        border-radius: 6px;
         text-decoration: none;
         font-weight: 500;
-        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+        font-size: clamp(0.75rem, 2vw, 0.85rem);
         transition: all 0.3s ease;
         cursor: pointer;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -577,20 +577,20 @@ st.html("""
     .sponsor-btn.secondary {
         background: white;
         color: #667eea;
-        border: 2px solid #667eea;
+        border: 1.5px solid #667eea;
     }
     
     /* Hover states - desktop only */
     @media (hover: hover) and (pointer: fine) {
         .sponsor-btn.primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.4);
         }
         
         .sponsor-btn.secondary:hover {
             background: #667eea;
             color: white;
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
     }
     
@@ -601,36 +601,36 @@ st.html("""
     
     .sponsor-message {
         color: #667eea;
-        font-size: clamp(0.75rem, 2vw, 0.85rem);
+        font-size: clamp(0.7rem, 1.8vw, 0.75rem);
         font-style: italic;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
         opacity: 0.9;
-        padding: 0 0.5rem;
+        padding: 0 0.25rem;
     }
     
     /* Mobile phones - portrait */
     @media only screen and (max-width: 480px) {
         .particle-container {
-            min-height: 280px;
-            padding: 1.5rem 0.75rem;
+            min-height: 140px;
+            padding: 0.75rem 0.5rem;
             margin: 0.5rem 0;
-            border-radius: 15px;
+            border-radius: 12px;
         }
         
         .sponsor-content {
-            padding: 1.25rem 1rem;
+            padding: 0.75rem;
             width: 95%;
         }
         
         .button-container {
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.5rem;
         }
         
         .sponsor-btn {
             width: 100%;
-            padding: 0.875rem 1rem;
-            font-size: 0.95rem;
+            padding: 0.625rem 0.75rem;
+            font-size: 0.85rem;
         }
         
         /* Hide some particles on small screens */
@@ -643,12 +643,35 @@ st.html("""
     /* Mobile phones - landscape */
     @media only screen and (max-width: 812px) and (orientation: landscape) {
         .particle-container {
-            min-height: 250px;
+            min-height: 125px;
+            padding: 0.5rem;
+        }
+        
+        .sponsor-content {
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .button-container {
+            gap: 0.4rem;
+        }
+        
+        .sponsor-btn {
+            padding: 0.4rem 0.625rem;
+            font-size: 0.75rem;
+            min-height: 32px;
+        }
+    }
+    
+    /* Tablets */
+    @media only screen and (min-width: 481px) and (max-width: 1024px) {
+        .particle-container {
+            min-height: 150px;
             padding: 1rem;
         }
         
         .sponsor-content {
-            padding: 1rem;
+            padding: 0.875rem 1.25rem;
+            max-width: 600px;
         }
         
         .button-container {
@@ -656,42 +679,20 @@ st.html("""
         }
         
         .sponsor-btn {
-            padding: 0.625rem 0.875rem;
+            padding: 0.5rem 1rem;
             font-size: 0.85rem;
-        }
-    }
-    
-    /* Tablets */
-    @media only screen and (min-width: 481px) and (max-width: 1024px) {
-        .particle-container {
-            min-height: 300px;
-            padding: 2rem 1.5rem;
-        }
-        
-        .sponsor-content {
-            padding: 1.75rem 2rem;
-            max-width: 600px;
-        }
-        
-        .button-container {
-            gap: 0.75rem;
-        }
-        
-        .sponsor-btn {
-            padding: 0.75rem 1.25rem;
-            font-size: 0.95rem;
-            min-width: 100px;
+            min-width: 80px;
         }
     }
     
     /* Desktop and larger */
     @media only screen and (min-width: 1025px) {
         .particle-container {
-            min-height: 280px;
+            min-height: 140px;
         }
         
         .sponsor-content {
-            padding: 2rem 2.5rem;
+            padding: 1rem 1.5rem;
         }
         
         .button-container {
@@ -702,8 +703,8 @@ st.html("""
     /* iPhone notch safe areas */
     @supports (padding: max(0px)) {
         .particle-container {
-            padding-left: max(1rem, env(safe-area-inset-left));
-            padding-right: max(1rem, env(safe-area-inset-right));
+            padding-left: max(0.75rem, env(safe-area-inset-left));
+            padding-right: max(0.75rem, env(safe-area-inset-right));
         }
     }
     
@@ -783,14 +784,14 @@ st.html("""
                    rel="noopener noreferrer"
                    class="sponsor-btn secondary"
                    aria-label="Star PlantFacts on GitHub">
-                    ⭐ Star Repo
+                    ⭐ Star
                 </a>
                 <a href="https://github.com/Maniwar" 
                    target="_blank" 
                    rel="noopener noreferrer"
                    class="sponsor-btn secondary"
                    aria-label="View all projects on GitHub">
-                    🔗 All Projects
+                    🔗 Projects
                 </a>
             </div>
             
